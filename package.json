@@ -12,6 +12,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.15",
     "elo-rank": "^1.0.4",
+    "es-toolkit": "^1.40.0",
     "eslint-plugin-better-tailwindcss": "^3.7.10",
     "rc-pagination": "^5.1.0",
     "react": "^19.1.1",

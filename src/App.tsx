@@ -1,4 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import EloRank from 'elo-rank';
+import { meanBy } from 'es-toolkit';
+
+const elo = new EloRank(15);
 
 // --- Types
 interface Player {
@@ -52,19 +56,33 @@ function computeLeaderboard(matches: Match[]): LeaderRow[] {
 
   for (const m of matches) {
     const aWin = m.winner === 'A';
+    const teamAMeanElo = meanBy(m.teamA, (id) => map.get(id)!.elo);
+    const teamBMeanElo = meanBy(m.teamB, (id) => map.get(id)!.elo);
+
     for (const id of m.teamA) {
       const row = map.get(id)!;
+      const expectedScore = elo.getExpected(row.elo, teamBMeanElo);
+
       if (aWin) {
         row.wins++;
-        row.elo += 100;
-      } else row.losses++;
+        row.elo = elo.updateRating(expectedScore, 1, row.elo);
+      } else {
+        row.losses++;
+        row.elo = elo.updateRating(expectedScore, 0, row.elo);
+      }
     }
+
     for (const id of m.teamB) {
       const row = map.get(id)!;
+      const expectedScore = elo.getExpected(row.elo, teamAMeanElo);
+
       if (!aWin) {
         row.wins++;
-        row.elo -= 100;
-      } else row.losses++;
+        row.elo = elo.updateRating(expectedScore, 1, row.elo);
+      } else {
+        row.losses++;
+        row.elo = elo.updateRating(expectedScore, 0, row.elo);
+      }
     }
   }
 
