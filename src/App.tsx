@@ -1,15 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import EloRank from 'elo-rank';
 import { meanBy } from 'es-toolkit';
+import supabase from '@/lib/supabase.ts';
+import useSupaQuery from '@/hooks/useSupaQuery.ts';
+import PlayerSelect from '@/components/PlayerSelect.tsx';
+import type { Player } from '@/types/common.ts';
+import { times } from 'es-toolkit/compat';
 
 const elo = new EloRank(15);
 
-// --- Types
-interface Player {
-  id: string;
-  name: string;
-  elo: number;
-}
 type Winner = 'A' | 'B';
 interface Match {
   id: string;
@@ -169,48 +168,19 @@ function Section({
   );
 }
 
-function PlayerSelect({
-  label,
-  value,
-  onChange,
-  exclude,
-}: {
-  label: string;
-  value: string | null;
-  onChange: (v: string | null) => void;
-  exclude: Set<string>;
-}) {
-  return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span
-        className={`
-          text-gray-600
-          dark:text-gray-300
-        `}
-      >
-        {label}
-      </span>
-      <select
-        className={`
-          rounded-xl border border-gray-200 bg-white p-2
-          focus:ring-2 focus:ring-indigo-500 focus:outline-none
-          dark:border-gray-700 dark:bg-gray-800
-        `}
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value || null)}
-      >
-        <option value="">— Select player —</option>
-        {PLAYERS.filter((p) => !exclude.has(p.id) || p.id === value).map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
 export default function App() {
+  const getPlayersCallback = useCallback(async () => supabase.from('player').select(), []);
+  const [getPlayers, { data: playerData }] = useSupaQuery(getPlayersCallback);
+  const players = playerData as Player[] | null;
+  const [teamAA, setTeamAA] = useState<string[]>([]);
+  const [teamBB, setTeamBB] = useState<string[]>([]);
+
+  useEffect(() => {
+    getPlayers();
+  }, [getPlayers]);
+
+  /// ///////////////////////////////////////////////////
+
   const [matches, setMatches] = useState<Match[]>([]);
 
   // Load / persist
@@ -239,7 +209,7 @@ export default function App() {
   const [winner, setWinner] = useState<Winner | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedIds = useMemo(() => new Set([...teamA, ...teamB].filter(Boolean) as string[]), [teamA, teamB]);
+  const selectedIds = useMemo(() => new Set([...teamA, ...teamB].filter(Boolean)), [teamA, teamB]);
 
   const leaderboard = useMemo(() => computeLeaderboard(matches), [matches]);
 
@@ -258,8 +228,8 @@ export default function App() {
   }
 
   function validate(): string | null {
-    const a = teamA.filter(Boolean) as string[];
-    const b = teamB.filter(Boolean) as string[];
+    const a = teamA.filter(Boolean);
+    const b = teamB.filter(Boolean);
     if (a.length !== 5 || b.length !== 5) return 'Each team must have 5 players.';
     const set = new Set([...a, ...b]);
     if (set.size !== 10) return 'Players must be unique across both teams.';
@@ -278,8 +248,8 @@ export default function App() {
     const newMatch: Match = {
       id: uid('m'),
       dateISO: new Date().toISOString(),
-      teamA: teamA as string[],
-      teamB: teamB as string[],
+      teamA,
+      teamB,
       winner: winner!,
     };
     setMatches((prev) => [newMatch, ...prev]);
@@ -363,14 +333,13 @@ export default function App() {
                   <th className="px-3 py-2 text-left font-semibold">Player</th>
                   <th className="px-3 py-2 text-right font-semibold">Elo</th>
                   <th className="px-3 py-2 text-right font-semibold">Wins</th>
-                  <th className="px-3 py-2 text-right font-semibold">Losses</th>
                   <th className="px-3 py-2 text-right font-semibold">Win Rate</th>
                 </tr>
               </thead>
               <tbody>
-                {leaderboard.map((row, i) => (
+                {players?.map((row, i) => (
                   <tr
-                    key={row.playerId}
+                    key={row.id}
                     className={
                       i % 2
                         ? `
@@ -384,16 +353,10 @@ export default function App() {
                     }
                   >
                     <td className="px-3 py-2">{i + 1}</td>
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{row.name}</span>
-                        <Pill>{row.wins + row.losses} games</Pill>
-                      </div>
-                    </td>
+                    <td className="px-3 py-2">{row.name}</td>
                     <td className="px-3 py-2 text-right">{row.elo}</td>
-                    <td className="px-3 py-2 text-right">{row.wins}</td>
-                    <td className="px-3 py-2 text-right">{row.losses}</td>
-                    <td className="px-3 py-2 text-right">{(row.winRate * 100).toFixed(1)}%</td>
+                    <td className="px-3 py-2 text-right">{row.win}</td>
+                    <td className="px-3 py-2 text-right">{((row.win / (row.win + row.lose)) * 100).toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -428,13 +391,13 @@ export default function App() {
                     <Pill>5 players</Pill>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
-                    {teamA.map((v, idx) => (
+                    {times(5).map((index) => (
                       <PlayerSelect
-                        key={idx}
-                        label={`Player ${idx + 1}`}
-                        value={v}
-                        onChange={(val) => updateTeam('A', idx, val)}
-                        exclude={selectedIds}
+                        key={index}
+                        players={players}
+                        selectedPlayers={[]}
+                        setTeam={setTeamAA}
+                        team={teamAA}
                       />
                     ))}
                   </div>
