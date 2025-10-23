@@ -1,14 +1,12 @@
 import React from 'react';
 
-function Section({
-  title,
-  children,
-  actions,
-}: {
+interface Props {
   title: string;
   children: React.ReactNode;
   actions?: React.ReactNode;
-}) {
+}
+
+function Section({ title, children, actions = null }: Props) {
   return (
     <section
       className={`

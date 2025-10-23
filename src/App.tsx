@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import EloRank from 'elo-rank';
-import { sampleSize, mean, zipWith, orderBy, meanBy, sum, sumBy } from 'es-toolkit';
+import { sampleSize, mean, zipWith, orderBy, meanBy, sumBy } from 'es-toolkit';
 import supabase from '@/lib/supabase.ts';
 import useSupaQuery from '@/hooks/useSupaQuery.ts';
 import type { Player, Match } from '@/types/common.ts';
