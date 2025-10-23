@@ -81,16 +81,19 @@ export default function App() {
     [refresh],
   );
 
-  const lastMatch = useCallback(() => {
-    const lastMatchData = matches?.[0];
-    const lastTeamA = players?.filter((player) => lastMatchData?.team_a_players.includes(player.id));
-    const lastTeamB = players?.filter((player) => lastMatchData?.team_b_players.includes(player.id));
+  const lastMatch = useCallback(
+    (match?: Match) => {
+      const lastMatchData = match || matches?.[0];
+      const lastTeamA = players?.filter((player) => lastMatchData?.team_a_players.includes(player.id));
+      const lastTeamB = players?.filter((player) => lastMatchData?.team_b_players.includes(player.id));
 
-    setTeamA(lastTeamA || []);
-    setTeamB(lastTeamB || []);
+      setTeamA(lastTeamA || []);
+      setTeamB(lastTeamB || []);
 
-    setAvailableIds([...(lastMatchData?.team_a_players || []), ...(lastMatchData?.team_b_players || [])]);
-  }, [matches, players]);
+      setAvailableIds([...(lastMatchData?.team_a_players || []), ...(lastMatchData?.team_b_players || [])]);
+    },
+    [matches, players],
+  );
 
   const endMatch = useCallback(
     async (match: Match, result: 'A' | 'B') => {
@@ -563,6 +566,21 @@ export default function App() {
                               }}
                             >
                               Cancel
+                            </button>
+                          )}
+                          {match.result && (
+                            <button
+                              type="button"
+                              className={`
+                                cursor-pointer rounded-full bg-green-600 px-2 py-1 text-xs text-white
+                                hover:bg-green-700
+                                disabled:opacity-50
+                              `}
+                              onClick={() => {
+                                lastMatch(match);
+                              }}
+                            >
+                              Rematch
                             </button>
                           )}
                         </div>
