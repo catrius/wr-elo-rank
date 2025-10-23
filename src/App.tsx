@@ -459,7 +459,7 @@ export default function App() {
                   `}
                   disabled={disabledSuggest}
                 >
-                  Suggest
+                  Shuffle
                 </button>
                 <button
                   type="button"
