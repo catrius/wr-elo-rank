@@ -159,73 +159,75 @@ export default function App() {
     [players, refresh],
   );
 
-  const suggestTeams = useCallback(() => {
-    if (!players) {
-      return;
-    }
-
-    const available = players.filter((p) => availableIds.includes(p.id));
-    const total = Math.min(available.length, 10);
-
-    if (total < 2) {
-      setTeamA([]);
-      setTeamB([]);
-      return;
-    }
-    const candidates = sampleSize(available, total);
-    const totalElo = sumBy(available, (player) => player.elo);
-    const TOLERANCE = 20;
-    const sizeA = Math.ceil(total / 2);
-    const target = (totalElo * sizeA) / total;
-
-    let bestDiff = Infinity;
-    let bestChoiceIndexes: number[] = [];
-    const withinTolerance: number[][] = [];
-
-    // DFS to choose exactly `sizeA` players whose Elo sum is closest to `target`
-    const dfs = (index: number, chosenIdxs: number[], chosenSum: number) => {
-      if (chosenIdxs.length === sizeA) {
-        const diff = Math.abs(chosenSum - target);
-
-        if (diff <= TOLERANCE) {
-          withinTolerance.push([...chosenIdxs]);
-        }
-
-        if (diff < bestDiff) {
-          bestDiff = diff;
-          bestChoiceIndexes = [...chosenIdxs];
-        }
+  const suggestTeams = useCallback(
+    (tolerance = 20) => {
+      if (!players) {
         return;
       }
 
-      if (index >= candidates.length) return;
+      const available = players.filter((p) => availableIds.includes(p.id));
+      const total = Math.min(available.length, 10);
 
-      // Prune: if not enough remaining players to fill Team A
-      const remainingNeeded = sizeA - chosenIdxs.length;
-      const remainingAvailable = candidates.length - index;
-      if (remainingNeeded > remainingAvailable) return;
+      if (total < 2) {
+        setTeamA([]);
+        setTeamB([]);
+        return;
+      }
+      const candidates = sampleSize(available, total);
+      const totalElo = sumBy(available, (player) => player.elo);
+      const sizeA = Math.ceil(total / 2);
+      const target = (totalElo * sizeA) / total;
 
-      // Option 1: take current index
-      dfs(index + 1, [...chosenIdxs, index], chosenSum + candidates[index].elo);
+      let bestDiff = Infinity;
+      let bestChoiceIndexes: number[] = [];
+      const withinTolerance: number[][] = [];
 
-      // Option 2: skip current index
-      dfs(index + 1, chosenIdxs, chosenSum);
-    };
+      // DFS to choose exactly `sizeA` players whose Elo sum is closest to `target`
+      const dfs = (index: number, chosenIdxs: number[], chosenSum: number) => {
+        if (chosenIdxs.length === sizeA) {
+          const diff = Math.abs(chosenSum - target);
 
-    dfs(0, [], 0);
+          if (diff <= tolerance) {
+            withinTolerance.push([...chosenIdxs]);
+          }
 
-    const pick = withinTolerance.length
-      ? withinTolerance[Math.floor(Math.random() * withinTolerance.length)]
-      : bestChoiceIndexes;
+          if (diff < bestDiff) {
+            bestDiff = diff;
+            bestChoiceIndexes = [...chosenIdxs];
+          }
+          return;
+        }
 
-    const chosenSet = new Set(pick);
+        if (index >= candidates.length) return;
 
-    const teamAPlayers = candidates.filter((_, i) => chosenSet.has(i));
-    const teamBPlayers = candidates.filter((_, i) => !chosenSet.has(i));
+        // Prune: if not enough remaining players to fill Team A
+        const remainingNeeded = sizeA - chosenIdxs.length;
+        const remainingAvailable = candidates.length - index;
+        if (remainingNeeded > remainingAvailable) return;
 
-    setTeamA(teamAPlayers);
-    setTeamB(teamBPlayers);
-  }, [availableIds, players]);
+        // Option 1: take current index
+        dfs(index + 1, [...chosenIdxs, index], chosenSum + candidates[index].elo);
+
+        // Option 2: skip current index
+        dfs(index + 1, chosenIdxs, chosenSum);
+      };
+
+      dfs(0, [], 0);
+
+      const pick = withinTolerance.length
+        ? withinTolerance[Math.floor(Math.random() * withinTolerance.length)]
+        : bestChoiceIndexes;
+
+      const chosenSet = new Set(pick);
+
+      const teamAPlayers = candidates.filter((_, i) => chosenSet.has(i));
+      const teamBPlayers = candidates.filter((_, i) => !chosenSet.has(i));
+
+      setTeamA(teamAPlayers);
+      setTeamB(teamBPlayers);
+    },
+    [availableIds, players],
+  );
 
   useEffect(() => {
     suggestTeams();
@@ -440,7 +442,7 @@ export default function App() {
                 </button>
                 <button
                   type="button"
-                  onClick={suggestTeams}
+                  onClick={() => suggestTeams(20)}
                   className={`
                     cursor-pointer rounded-xl border border-gray-200 px-4 py-2
                     hover:bg-gray-50
@@ -450,6 +452,19 @@ export default function App() {
                   disabled={disabledSuggest}
                 >
                   Suggest Teams
+                </button>
+                <button
+                  type="button"
+                  onClick={() => suggestTeams(0)}
+                  className={`
+                    cursor-pointer rounded-xl border border-gray-200 px-4 py-2
+                    hover:bg-gray-50
+                    disabled:cursor-not-allowed disabled:opacity-50
+                    dark:border-gray-700 dark:hover:bg-gray-800
+                  `}
+                  disabled={disabledSuggest}
+                >
+                  Best Teams
                 </button>
               </div>
             </form>
