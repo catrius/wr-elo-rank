@@ -1,270 +1,171 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import EloRank from 'elo-rank';
-import { meanBy } from 'es-toolkit';
+import { sampleSize, difference, mean, zipWith } from 'es-toolkit';
 import supabase from '@/lib/supabase.ts';
 import useSupaQuery from '@/hooks/useSupaQuery.ts';
-import PlayerSelect from '@/components/PlayerSelect.tsx';
-import type { Player } from '@/types/common.ts';
-import { times } from 'es-toolkit/compat';
+import type { Player, Match } from '@/types/common.ts';
+import { find, some } from 'es-toolkit/compat';
+import Pill from '@/components/Pill';
+import Section from '@/components/Section.tsx';
 
-const elo = new EloRank(15);
-
-type Winner = 'A' | 'B';
-interface Match {
-  id: string;
-  dateISO: string; // when the match was recorded
-  teamA: string[]; // player ids (5)
-  teamB: string[]; // player ids (5)
-  winner: Winner;
-}
-
-interface LeaderRow {
-  playerId: string;
-  name: string;
-  wins: number;
-  losses: number;
-  winRate: number; // 0..1
-  elo: number;
-}
-
-// --- Constants
-const STORAGE_KEY = 'lol-leaderboard-matches-v1';
-
-const PLAYERS: Player[] = [
-  { id: 'p1', name: 'Aatrox', elo: 1500 },
-  { id: 'p2', name: 'Blitz', elo: 1500 },
-  { id: 'p3', name: 'Cait', elo: 1500 },
-  { id: 'p4', name: 'Diana', elo: 1500 },
-  { id: 'p5', name: 'Ekko', elo: 1500 },
-  { id: 'p6', name: 'Fiora', elo: 1500 },
-  { id: 'p7', name: 'Garen', elo: 1500 },
-  { id: 'p8', name: 'Hecarim', elo: 1500 },
-  { id: 'p9', name: 'Irelia', elo: 1500 },
-  { id: 'p10', name: 'Jinx', elo: 1500 },
-];
-
-// --- Utilities
-const byId = new Map(PLAYERS.map((p) => [p.id, p] as const));
-const nameOf = (id: string) => byId.get(id)?.name ?? id;
-
-function computeLeaderboard(matches: Match[]): LeaderRow[] {
-  const map = new Map<string, LeaderRow>();
-  for (const p of PLAYERS) {
-    map.set(p.id, { playerId: p.id, name: p.name, wins: 0, losses: 0, winRate: 0, elo: p.elo });
-  }
-
-  for (const m of matches) {
-    const aWin = m.winner === 'A';
-    const teamAMeanElo = meanBy(m.teamA, (id) => map.get(id)!.elo);
-    const teamBMeanElo = meanBy(m.teamB, (id) => map.get(id)!.elo);
-
-    for (const id of m.teamA) {
-      const row = map.get(id)!;
-      const expectedScore = elo.getExpected(row.elo, teamBMeanElo);
-
-      if (aWin) {
-        row.wins++;
-        row.elo = elo.updateRating(expectedScore, 1, row.elo);
-      } else {
-        row.losses++;
-        row.elo = elo.updateRating(expectedScore, 0, row.elo);
-      }
-    }
-
-    for (const id of m.teamB) {
-      const row = map.get(id)!;
-      const expectedScore = elo.getExpected(row.elo, teamAMeanElo);
-
-      if (!aWin) {
-        row.wins++;
-        row.elo = elo.updateRating(expectedScore, 1, row.elo);
-      } else {
-        row.losses++;
-        row.elo = elo.updateRating(expectedScore, 0, row.elo);
-      }
-    }
-  }
-
-  for (const row of map.values()) {
-    const total = row.wins + row.losses;
-    row.winRate = total === 0 ? 0 : row.wins / total;
-  }
-
-  return Array.from(map.values()).sort((a, b) => {
-    // Sort by winRate desc, then wins desc, then losses asc, then name
-    if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    if (a.losses !== b.losses) return a.losses - b.losses;
-    return a.name.localeCompare(b.name);
-  });
-}
-
-function uid(prefix = 'id'): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
-}
-
-// --- Sample mocked matches (only used on first load if no data yet)
-const SAMPLE_MATCHES: Match[] = [
-  {
-    id: uid('m'),
-    dateISO: new Date().toISOString(),
-    teamA: ['p1', 'p2', 'p3', 'p4', 'p5'],
-    teamB: ['p6', 'p7', 'p8', 'p9', 'p10'],
-    winner: 'A',
-  },
-  {
-    id: uid('m'),
-    dateISO: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    teamA: ['p1', 'p6', 'p7', 'p9', 'p10'],
-    teamB: ['p2', 'p3', 'p4', 'p5', 'p8'],
-    winner: 'B',
-  },
-];
-
-// --- Components
-function Pill({ children }: { children: React.ReactNode }) {
-  return (
-    <span
-      className={`
-        inline-flex items-center rounded-full bg-white/70 px-2 py-1 text-xs font-medium ring-1 ring-gray-200 ring-inset
-        dark:bg-gray-800/50 dark:ring-gray-700
-      `}
-    >
-      {children}
-    </span>
-  );
-}
-
-function Section({
-  title,
-  children,
-  actions,
-}: {
-  title: string;
-  children: React.ReactNode;
-  actions?: React.ReactNode;
-}) {
-  return (
-    <section
-      className={`
-        rounded-2xl border border-gray-100 bg-white p-4 shadow-sm
-        md:p-6
-        dark:border-gray-800 dark:bg-gray-900
-      `}
-    >
-      <div className="mb-4 flex items-center justify-between">
-        <h2
-          className={`
-            text-lg font-semibold tracking-tight
-            md:text-xl
-          `}
-        >
-          {title}
-        </h2>
-        {actions}
-      </div>
-      {children}
-    </section>
-  );
-}
+const eloRank = new EloRank(15);
 
 export default function App() {
-  const getPlayersCallback = useCallback(async () => supabase.from('player').select(), []);
+  const getPlayersCallback = useCallback(
+    async () => supabase.from('player').select().order('elo', { ascending: false }),
+    [],
+  );
   const [getPlayers, { data: playerData }] = useSupaQuery(getPlayersCallback);
   const players = playerData as Player[] | null;
-  const [teamAA, setTeamAA] = useState<string[]>([]);
-  const [teamBB, setTeamBB] = useState<string[]>([]);
 
-  useEffect(() => {
+  const getMatchesCallback = useCallback(
+    async () => supabase.from('match').select().order('created_at', { ascending: false }).limit(20),
+    [],
+  );
+  const [getMatches, { data: matchesData }] = useSupaQuery(getMatchesCallback);
+  const matches = matchesData as Match[] | null;
+
+  const getMatchCountCallback = useCallback(
+    async () => supabase.from('match').select('*', { count: 'exact', head: true }),
+    [],
+  );
+  const [getMatchCount, { count: matchCount }] = useSupaQuery(getMatchCountCallback);
+
+  const [teamAA, setTeamAA] = useState<Player[]>([]);
+  const [teamBB, setTeamBB] = useState<Player[]>([]);
+
+  const disabledStart = useMemo(() => some(matches, (match) => !match.result), [matches]);
+
+  const newMatch = useMemo(
+    () =>
+      ({
+        team_a_elos: teamAA.map((player) => player.elo),
+        team_a_players: teamAA.map((player) => player.id),
+        team_b_elos: teamBB.map((player) => player.elo),
+        team_b_players: teamBB.map((player) => player.id),
+      }) as Match,
+    [teamAA, teamBB],
+  );
+
+  const createMatchCallback = useCallback(async () => supabase.from('match').insert([newMatch]), [newMatch]);
+  const [createMatch] = useSupaQuery(createMatchCallback);
+
+  const refresh = useCallback(() => {
     getPlayers();
-  }, [getPlayers]);
+    getMatches();
+    getMatchCount();
+  }, [getMatchCount, getMatches, getPlayers]);
 
-  /// ///////////////////////////////////////////////////
+  const endMatch = useCallback(
+    async (match: Match, result: 'A' | 'B') => {
+      const meanTeamAElo = mean(match.team_a_elos);
+      const meanTeamBElo = mean(match.team_b_elos);
 
-  const [matches, setMatches] = useState<Match[]>([]);
+      const teamANewElos = match.team_a_elos.map((playerAElo) => {
+        const resultNumber = result === 'A' ? 1 : 0;
+        const expectedScoreA = eloRank.getExpected(playerAElo, meanTeamBElo);
+        return eloRank.updateRating(expectedScoreA, resultNumber, playerAElo);
+      });
 
-  // Load / persist
+      const teamBNewElos = match.team_b_elos.map((playerBElo) => {
+        const resultNumber = result === 'B' ? 1 : 0;
+        const expectedScoreB = eloRank.getExpected(playerBElo, meanTeamAElo);
+        return eloRank.updateRating(expectedScoreB, resultNumber, playerBElo);
+      });
+
+      const teamANewWins = match.team_a_players.map((id) => {
+        const player = find(players, { id });
+        if (!player) {
+          return 0;
+        }
+        if (result === 'A') {
+          return player.win + 1;
+        }
+        return player.win;
+      }, []);
+
+      const teamBNewWins = match.team_b_players.map((id) => {
+        const player = find(players, { id });
+        if (!player) {
+          return 0;
+        }
+        if (result === 'B') {
+          return player.win + 1;
+        }
+        return player.win;
+      }, []);
+
+      const teamANewTotal = match.team_a_players.map((id) => {
+        const player = find(players, { id });
+        if (!player) {
+          return 1;
+        }
+        return player.total + 1;
+      }, []);
+
+      const teamBNewTotal = match.team_b_players.map((id) => {
+        const player = find(players, { id });
+        if (!player) {
+          return 1;
+        }
+        return player.total + 1;
+      }, []);
+
+      const updatedAPlayers: Partial<Player>[] = zipWith(
+        match.team_a_players,
+        teamANewElos,
+        teamANewWins,
+        teamANewTotal,
+        (id: number, elo: number, win: number, total: number) => ({
+          id,
+          elo,
+          win,
+          total,
+        }),
+      );
+
+      const updatedBPlayers: Partial<Player>[] = zipWith(
+        match.team_b_players,
+        teamBNewElos,
+        teamBNewWins,
+        teamBNewTotal,
+        (id: number, elo: number, win: number, total: number) => ({
+          id,
+          elo,
+          win,
+          total,
+        }),
+      );
+
+      await supabase
+        .from('match')
+        .update({ result, team_a_new_elos: teamANewElos, team_b_new_elos: teamBNewElos })
+        .eq('id', match.id);
+
+      await supabase.from('player').upsert([...updatedAPlayers, ...updatedBPlayers]);
+
+      refresh();
+    },
+    [players, refresh],
+  );
+
   useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw) as Match[];
-        setMatches(parsed);
-        return;
-      } catch (e) {
-        console.warn('Failed to parse stored matches, resetting.');
-      }
-    }
-    // Seed with samples if none
-    setMatches(SAMPLE_MATCHES);
-  }, []);
+    refresh();
+  }, [refresh]);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(matches));
-  }, [matches]);
-
-  // Form state
-  const [teamA, setTeamA] = useState<(string | null)[]>([null, null, null, null, null]);
-  const [teamB, setTeamB] = useState<(string | null)[]>([null, null, null, null, null]);
-  const [winner, setWinner] = useState<Winner | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const selectedIds = useMemo(() => new Set([...teamA, ...teamB].filter(Boolean)), [teamA, teamB]);
-
-  const leaderboard = useMemo(() => computeLeaderboard(matches), [matches]);
-
-  function updateTeam(which: 'A' | 'B', index: number, value: string | null) {
-    const setter = which === 'A' ? setTeamA : setTeamB;
-    const arr = (which === 'A' ? teamA : teamB).slice();
-    arr[index] = value;
-    setter(arr);
-  }
-
-  function resetForm() {
-    setTeamA([null, null, null, null, null]);
-    setTeamB([null, null, null, null, null]);
-    setWinner(null);
-    setError(null);
-  }
-
-  function validate(): string | null {
-    const a = teamA.filter(Boolean);
-    const b = teamB.filter(Boolean);
-    if (a.length !== 5 || b.length !== 5) return 'Each team must have 5 players.';
-    const set = new Set([...a, ...b]);
-    if (set.size !== 10) return 'Players must be unique across both teams.';
-    if (!winner) return 'Please select a winner.';
-    return null;
-  }
-
-  function submitMatch(e: React.FormEvent) {
-    e.preventDefault();
-    const v = validate();
-    if (v) {
-      setError(v);
+  const suggestTeams = useCallback(() => {
+    if (!players) {
       return;
     }
+    const sampleA = sampleSize(players, 5);
+    const sampleB = sampleSize(difference(players, sampleA || []), 5);
+    setTeamAA(sampleA);
+    setTeamBB(sampleB);
+  }, [players]);
 
-    const newMatch: Match = {
-      id: uid('m'),
-      dateISO: new Date().toISOString(),
-      teamA,
-      teamB,
-      winner: winner!,
-    };
-    setMatches((prev) => [newMatch, ...prev]);
-    resetForm();
-  }
-
-  function removeMatch(id: string) {
-    setMatches((prev) => prev.filter((m) => m.id !== id));
-  }
-
-  function clearAll() {
-    if (confirm('This will delete ALL matches. Continue?')) {
-      setMatches([]);
-    }
-  }
+  useEffect(() => {
+    suggestTeams();
+  }, [suggestTeams]);
 
   return (
     <div
@@ -292,29 +193,8 @@ export default function App() {
                 md:text-3xl
               `}
             >
-              LoL Friend Group Leaderboard
+              Go Go Toolkit
             </h1>
-            <p
-              className={`
-                mt-1 text-sm text-gray-600
-                dark:text-gray-300
-              `}
-            >
-              Vite + React + TypeScript + Tailwind (client-only, mocked data)
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={clearAll}
-              className={`
-                rounded-xl border border-red-200 px-3 py-2 text-sm
-                hover:bg-red-50
-                dark:border-red-800 dark:hover:bg-red-900/30
-              `}
-              title="Clear all matches"
-            >
-              Reset Data
-            </button>
           </div>
         </header>
 
@@ -356,7 +236,7 @@ export default function App() {
                     <td className="px-3 py-2">{row.name}</td>
                     <td className="px-3 py-2 text-right">{row.elo}</td>
                     <td className="px-3 py-2 text-right">{row.win}</td>
-                    <td className="px-3 py-2 text-right">{((row.win / (row.win + row.lose)) * 100).toFixed(1)}%</td>
+                    <td className="px-3 py-2 text-right">{((row.win / row.total) * 100).toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -372,7 +252,7 @@ export default function App() {
           `}
         >
           <Section title="Add Match">
-            <form onSubmit={submitMatch} className="space-y-4">
+            <form className="space-y-4">
               <div
                 className={`
                   grid grid-cols-1 gap-4
@@ -388,17 +268,19 @@ export default function App() {
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="font-semibold">Team A</h3>
-                    <Pill>5 players</Pill>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
-                    {times(5).map((index) => (
-                      <PlayerSelect
-                        key={index}
-                        players={players}
-                        selectedPlayers={[]}
-                        setTeam={setTeamAA}
-                        team={teamAA}
-                      />
+                    {teamAA.map((player) => (
+                      <div
+                        className={`
+                          rounded-xl border border-gray-200 bg-white p-2 text-sm
+                          focus:ring-2 focus:ring-indigo-500 focus:outline-none
+                          dark:border-gray-700 dark:bg-gray-800
+                        `}
+                        key={player.id}
+                      >
+                        {player.name}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -412,168 +294,151 @@ export default function App() {
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="font-semibold">Team B</h3>
-                    <Pill>5 players</Pill>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
-                    {teamB.map((v, idx) => (
-                      <PlayerSelect
-                        key={idx}
-                        label={`Player ${idx + 1}`}
-                        value={v}
-                        onChange={(val) => updateTeam('B', idx, val)}
-                        exclude={selectedIds}
-                      />
+                    {teamBB.map((player) => (
+                      <div
+                        className={`
+                          rounded-xl border border-gray-200 bg-white p-2 text-sm
+                          focus:ring-2 focus:ring-indigo-500 focus:outline-none
+                          dark:border-gray-700 dark:bg-gray-800
+                        `}
+                        key={player.id}
+                      >
+                        {player.name}
+                      </div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* Winner */}
-              <div className="flex items-center gap-6">
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="winner"
-                    className="accent-indigo-600"
-                    checked={winner === 'A'}
-                    onChange={() => setWinner('A')}
-                  />
-                  <span>Team A Won</span>
-                </label>
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="winner"
-                    className="accent-indigo-600"
-                    checked={winner === 'B'}
-                    onChange={() => setWinner('B')}
-                  />
-                  <span>Team B Won</span>
-                </label>
-              </div>
-
-              {error && (
-                <div
-                  className={`
-                    text-sm text-red-600
-                    dark:text-red-400
-                  `}
-                >
-                  {error}
-                </div>
-              )}
-
               <div className="flex items-center gap-3">
                 <button
-                  type="submit"
+                  type="button"
                   className={`
-                    rounded-xl bg-indigo-600 px-4 py-2 text-white
+                    cursor-pointer rounded-xl bg-indigo-600 px-4 py-2 text-white
                     hover:bg-indigo-700
                     disabled:opacity-50
                   `}
-                  disabled={!!validate()}
+                  onClick={() => {
+                    createMatch().then(() => {
+                      refresh();
+                    });
+                  }}
+                  disabled={disabledStart}
                 >
-                  Save Match
+                  Start Match
                 </button>
                 <button
                   type="button"
-                  onClick={resetForm}
+                  onClick={suggestTeams}
                   className={`
-                    rounded-xl border border-gray-200 px-4 py-2
+                    cursor-pointer rounded-xl border border-gray-200 px-4 py-2
                     hover:bg-gray-50
                     dark:border-gray-700 dark:hover:bg-gray-800
                   `}
                 >
-                  Clear
+                  Suggest Teams
                 </button>
               </div>
             </form>
           </Section>
 
           {/* History */}
-          <Section title="Match History" actions={<Pill>{matches.length} total</Pill>}>
-            {matches.length === 0 ? (
-              <div
-                className={`
-                  text-sm text-gray-600
-                  dark:text-gray-300
-                `}
-              >
-                No matches yet. Add your first one!
-              </div>
-            ) : (
-              <ul className="space-y-3">
-                {matches.map((m) => (
-                  <li
-                    key={m.id}
-                    className={`
-                      rounded-xl border border-gray-200 p-3
-                      dark:border-gray-700
-                    `}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div
-                        className={`
-                          text-sm text-gray-600
-                          dark:text-gray-300
-                        `}
-                      >
-                        {new Date(m.dateISO).toLocaleString()}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Pill>Winner: Team {m.winner}</Pill>
-                        <button
-                          onClick={() => removeMatch(m.id)}
-                          title="Delete match"
-                          className={`
-                            rounded-lg border border-gray-200 px-2 py-1 text-xs
-                            hover:bg-gray-50
-                            dark:border-gray-700 dark:hover:bg-gray-800
-                          `}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                    <div
+          {matches && (
+            <Section title="Match History" actions={<Pill>{matchCount} total</Pill>}>
+              {matches.length === 0 ? (
+                <div
+                  className={`
+                    text-sm text-gray-600
+                    dark:text-gray-300
+                  `}
+                >
+                  No matches yet. Add your first one!
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {matches.map((match) => (
+                    <li
+                      key={match.id}
                       className={`
-                        mt-2 grid grid-cols-1 gap-4 text-sm
-                        md:grid-cols-2
+                        rounded-xl border border-gray-200 p-3
+                        dark:border-gray-700
                       `}
                     >
-                      <div>
-                        <div className="mb-1 font-medium">Team A</div>
-                        <ul className="list-inside list-disc space-y-0.5">
-                          {m.teamA.map((id) => (
-                            <li key={id}>{nameOf(id)}</li>
-                          ))}
-                        </ul>
+                      <div className="flex items-center justify-between">
+                        <div
+                          className={`
+                            text-sm text-gray-600
+                            dark:text-gray-300
+                          `}
+                        >
+                          {new Date(match.created_at).toLocaleString()}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Pill>{match.result ? `Winner: Team ${match.result}` : 'In game'}</Pill>
+                        </div>
                       </div>
-                      <div>
-                        <div className="mb-1 font-medium">Team B</div>
-                        <ul className="list-inside list-disc space-y-0.5">
-                          {m.teamB.map((id) => (
-                            <li key={id}>{nameOf(id)}</li>
-                          ))}
-                        </ul>
+                      <div
+                        className={`
+                          mt-2 grid grid-cols-1 gap-4 text-sm
+                          md:grid-cols-2
+                        `}
+                      >
+                        <div>
+                          <div className="mb-1 font-medium">Team A</div>
+                          <ul className="mb-2 list-inside list-disc space-y-0.5">
+                            {match.team_a_players.map((id) => (
+                              <li key={id}>{find(players, { id })?.name}</li>
+                            ))}
+                          </ul>
+                          {!match.result && (
+                            <button
+                              type="button"
+                              className={`
+                                cursor-pointer rounded-xl bg-cyan-600 px-4 py-2 text-white
+                                hover:bg-cyan-700
+                                disabled:opacity-50
+                              `}
+                              onClick={() => {
+                                endMatch(match, 'A');
+                              }}
+                            >
+                              Team A wins
+                            </button>
+                          )}
+                        </div>
+                        <div>
+                          <div className="mb-1 font-medium">Team B</div>
+                          <ul className="mb-2 list-inside list-disc space-y-0.5">
+                            {match.team_b_players.map((id) => (
+                              <li key={id}>{find(players, { id })?.name}</li>
+                            ))}
+                          </ul>
+                          {!match.result && (
+                            <button
+                              type="button"
+                              className={`
+                                cursor-pointer rounded-xl bg-cyan-600 px-4 py-2 text-white
+                                hover:bg-cyan-700
+                                disabled:opacity-50
+                              `}
+                              onClick={() => {
+                                endMatch(match, 'B');
+                              }}
+                            >
+                              Team B wins
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Section>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Section>
+          )}
         </div>
-
-        {/* Footer */}
-        <footer
-          className={`
-            mt-10 text-xs text-gray-500
-            dark:text-gray-400
-          `}
-        >
-          <p>Tip: data is stored locally in your browser (localStorage). Use “Reset Data” to clear.</p>
-        </footer>
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ export interface Database {
         Row: {
           created_at: string;
           id: number;
-          result: number | null;
+          result: string | null;
           team_a_elos: number[];
           team_a_new_elos: number[] | null;
           team_a_players: number[];
@@ -40,7 +40,7 @@ export interface Database {
         Insert: {
           created_at?: string;
           id?: number;
-          result?: number | null;
+          result?: string | null;
           team_a_elos: number[];
           team_a_new_elos?: number[] | null;
           team_a_players: number[];
@@ -51,7 +51,7 @@ export interface Database {
         Update: {
           created_at?: string;
           id?: number;
-          result?: number | null;
+          result?: string | null;
           team_a_elos?: number[];
           team_a_new_elos?: number[] | null;
           team_a_players?: number[];
@@ -66,24 +66,24 @@ export interface Database {
           created_at: string;
           elo: number;
           id: number;
-          lose: number;
           name: string;
+          total: number;
           win: number;
         };
         Insert: {
           created_at?: string;
           elo?: number;
           id?: number;
-          lose?: number;
           name?: string;
+          total?: number;
           win?: number;
         };
         Update: {
           created_at?: string;
           elo?: number;
           id?: number;
-          lose?: number;
           name?: string;
+          total?: number;
           win?: number;
         };
         Relationships: [];
