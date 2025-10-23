@@ -35,12 +35,19 @@ export default function App() {
   const [teamB, setTeamB] = useState<Player[]>([]);
   const [availableIds, setAvailableIds] = useState<number[]>([]);
 
+  const available = useMemo(() => {
+    if (!players) {
+      return [];
+    }
+    return players.filter((p) => availableIds.includes(p.id));
+  }, [availableIds, players]);
+
   const disabledStart = useMemo(
     () => some(matches, (match) => !match.result) || teamA.length === 0,
     [matches, teamA.length],
   );
 
-  const disabledSuggest = useMemo(() => teamA.length === 0, [teamA.length]);
+  const disabledSuggest = useMemo(() => availableIds.length < 2, [availableIds.length]);
 
   const newMatch = useMemo(
     () =>
@@ -81,6 +88,8 @@ export default function App() {
 
     setTeamA(lastTeamA || []);
     setTeamB(lastTeamB || []);
+
+    setAvailableIds([...(lastMatchData?.team_a_players || []), ...(lastMatchData?.team_b_players || [])]);
   }, [matches, players]);
 
   const endMatch = useCallback(
@@ -182,7 +191,6 @@ export default function App() {
         return;
       }
 
-      const available = players.filter((p) => availableIds.includes(p.id));
       const total = Math.min(available.length, 10);
 
       if (total < 2) {
@@ -243,7 +251,7 @@ export default function App() {
       setTeamA(teamAPlayers);
       setTeamB(teamBPlayers);
     },
-    [availableIds, players],
+    [available, players],
   );
 
   useEffect(() => {
