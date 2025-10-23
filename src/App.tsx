@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import EloRank from 'elo-rank';
-import { sampleSize, difference, mean, zipWith, orderBy } from 'es-toolkit';
+import { sampleSize, mean, zipWith, orderBy, meanBy, sum, sumBy } from 'es-toolkit';
 import supabase from '@/lib/supabase.ts';
 import useSupaQuery from '@/hooks/useSupaQuery.ts';
 import type { Player, Match } from '@/types/common.ts';
@@ -35,7 +35,12 @@ export default function App() {
   const [teamB, setTeamB] = useState<Player[]>([]);
   const [availableIds, setAvailableIds] = useState<number[]>([]);
 
-  const disabledStart = useMemo(() => some(matches, (match) => !match.result), [matches]);
+  const disabledStart = useMemo(
+    () => some(matches, (match) => !match.result) || teamA.length === 0,
+    [matches, teamA.length],
+  );
+
+  const disabledSuggest = useMemo(() => teamA.length === 0, [teamA.length]);
 
   const newMatch = useMemo(
     () =>
@@ -50,6 +55,10 @@ export default function App() {
 
   const createMatchCallback = useCallback(async () => supabase.from('match').insert([newMatch]), [newMatch]);
   const [createMatch] = useSupaQuery(createMatchCallback);
+
+  const toggleAvailable = useCallback((id: number) => {
+    setAvailableIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
 
   const refresh = useCallback(() => {
     getPlayers();
@@ -150,33 +159,81 @@ export default function App() {
     [players, refresh],
   );
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
   const suggestTeams = useCallback(() => {
     if (!players) {
       return;
     }
+
     const available = players.filter((p) => availableIds.includes(p.id));
     const total = Math.min(available.length, 10);
 
+    if (total < 2) {
+      setTeamA([]);
+      setTeamB([]);
+      return;
+    }
+    const candidates = sampleSize(available, total);
+    const totalElo = sumBy(available, (player) => player.elo);
+    const TOLERANCE = 20;
     const sizeA = Math.ceil(total / 2);
-    const sizeB = total - sizeA;
+    const target = (totalElo * sizeA) / total;
 
-    const sampleA = sampleSize(available, sizeA);
-    const sampleB = sampleSize(difference(available, sampleA || []), sizeB);
-    setTeamA(sampleA);
-    setTeamB(sampleB);
+    let bestDiff = Infinity;
+    let bestChoiceIndexes: number[] = [];
+    const withinTolerance: number[][] = [];
+
+    // DFS to choose exactly `sizeA` players whose Elo sum is closest to `target`
+    const dfs = (index: number, chosenIdxs: number[], chosenSum: number) => {
+      if (chosenIdxs.length === sizeA) {
+        const diff = Math.abs(chosenSum - target);
+
+        if (diff <= TOLERANCE) {
+          withinTolerance.push([...chosenIdxs]);
+        }
+
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          bestChoiceIndexes = [...chosenIdxs];
+        }
+        return;
+      }
+
+      if (index >= candidates.length) return;
+
+      // Prune: if not enough remaining players to fill Team A
+      const remainingNeeded = sizeA - chosenIdxs.length;
+      const remainingAvailable = candidates.length - index;
+      if (remainingNeeded > remainingAvailable) return;
+
+      // Option 1: take current index
+      dfs(index + 1, [...chosenIdxs, index], chosenSum + candidates[index].elo);
+
+      // Option 2: skip current index
+      dfs(index + 1, chosenIdxs, chosenSum);
+    };
+
+    dfs(0, [], 0);
+
+    const pick = withinTolerance.length
+      ? withinTolerance[Math.floor(Math.random() * withinTolerance.length)]
+      : bestChoiceIndexes;
+
+    const chosenSet = new Set(pick);
+
+    const teamAPlayers = candidates.filter((_, i) => chosenSet.has(i));
+    const teamBPlayers = candidates.filter((_, i) => !chosenSet.has(i));
+
+    setTeamA(teamAPlayers);
+    setTeamB(teamBPlayers);
   }, [availableIds, players]);
-
-  const toggleAvailable = useCallback((id: number) => {
-    setAvailableIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }, []);
 
   useEffect(() => {
     suggestTeams();
   }, [suggestTeams]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return (
     <div
@@ -262,7 +319,7 @@ export default function App() {
             md:mt-10 md:grid-cols-2
           `}
         >
-          <Section title="Available Players">
+          <Section title="Available Players" actions={<Pill>{availableIds.length} total</Pill>}>
             <div
               className={`
                 columns-2 gap-2
@@ -315,6 +372,7 @@ export default function App() {
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="font-semibold">Team A</h3>
+                    {teamA.length > 0 && <Pill>{`Avg ${Math.round(meanBy(teamA, (player) => player.elo))}`}</Pill>}
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     {teamA.map((player) => (
@@ -341,6 +399,7 @@ export default function App() {
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="font-semibold">Team B</h3>
+                    {teamB.length > 0 && <Pill>{`Avg ${Math.round(meanBy(teamB, (player) => player.elo))}`}</Pill>}
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     {teamB.map((player) => (
@@ -359,13 +418,13 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex place-content-end items-center gap-3">
                 <button
                   type="button"
                   className={`
                     cursor-pointer rounded-xl bg-indigo-600 px-4 py-2 text-white
                     hover:bg-indigo-700
-                    disabled:opacity-50
+                    disabled:cursor-not-allowed disabled:opacity-50
                   `}
                   onClick={() => {
                     createMatch().then(() => {
@@ -382,8 +441,10 @@ export default function App() {
                   className={`
                     cursor-pointer rounded-xl border border-gray-200 px-4 py-2
                     hover:bg-gray-50
+                    disabled:cursor-not-allowed disabled:opacity-50
                     dark:border-gray-700 dark:hover:bg-gray-800
                   `}
+                  disabled={disabledSuggest}
                 >
                   Suggest Teams
                 </button>
