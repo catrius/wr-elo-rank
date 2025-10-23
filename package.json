@@ -25,6 +25,7 @@
     "@eslint/compat": "^1.4.0",
     "@eslint/js": "^9.38.0",
     "@stylistic/eslint-plugin": "^3.1.0",
+    "@types/elo-rank": "^1.0.3",
     "@types/node": "^24.6.0",
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
