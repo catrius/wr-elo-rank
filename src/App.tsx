@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import EloRank from 'elo-rank';
-import { sampleSize, difference, mean, zipWith } from 'es-toolkit';
+import { sampleSize, difference, mean, zipWith, orderBy } from 'es-toolkit';
 import supabase from '@/lib/supabase.ts';
 import useSupaQuery from '@/hooks/useSupaQuery.ts';
 import type { Player, Match } from '@/types/common.ts';
@@ -31,20 +31,21 @@ export default function App() {
   );
   const [getMatchCount, { count: matchCount }] = useSupaQuery(getMatchCountCallback);
 
-  const [teamAA, setTeamAA] = useState<Player[]>([]);
-  const [teamBB, setTeamBB] = useState<Player[]>([]);
+  const [teamA, setTeamA] = useState<Player[]>([]);
+  const [teamB, setTeamB] = useState<Player[]>([]);
+  const [availableIds, setAvailableIds] = useState<number[]>([]);
 
   const disabledStart = useMemo(() => some(matches, (match) => !match.result), [matches]);
 
   const newMatch = useMemo(
     () =>
       ({
-        team_a_elos: teamAA.map((player) => player.elo),
-        team_a_players: teamAA.map((player) => player.id),
-        team_b_elos: teamBB.map((player) => player.elo),
-        team_b_players: teamBB.map((player) => player.id),
+        team_a_elos: teamA.map((player) => player.elo),
+        team_a_players: teamA.map((player) => player.id),
+        team_b_elos: teamB.map((player) => player.elo),
+        team_b_players: teamB.map((player) => player.id),
       }) as Match,
-    [teamAA, teamBB],
+    [teamA, teamB],
   );
 
   const createMatchCallback = useCallback(async () => supabase.from('match').insert([newMatch]), [newMatch]);
@@ -157,11 +158,21 @@ export default function App() {
     if (!players) {
       return;
     }
-    const sampleA = sampleSize(players, 5);
-    const sampleB = sampleSize(difference(players, sampleA || []), 5);
-    setTeamAA(sampleA);
-    setTeamBB(sampleB);
-  }, [players]);
+    const available = players.filter((p) => availableIds.includes(p.id));
+    const total = Math.min(available.length, 10);
+
+    const sizeA = Math.ceil(total / 2);
+    const sizeB = total - sizeA;
+
+    const sampleA = sampleSize(available, sizeA);
+    const sampleB = sampleSize(difference(available, sampleA || []), sizeB);
+    setTeamA(sampleA);
+    setTeamB(sampleB);
+  }, [availableIds, players]);
+
+  const toggleAvailable = useCallback((id: number) => {
+    setAvailableIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
 
   useEffect(() => {
     suggestTeams();
@@ -251,6 +262,42 @@ export default function App() {
             md:mt-10 md:grid-cols-2
           `}
         >
+          <Section title="Available Players">
+            <div
+              className={`
+                columns-2 gap-2
+                [column-fill:_balance]
+              `}
+            >
+              {players &&
+                orderBy(players, ['name'], ['asc'])?.map((player) => (
+                  <label
+                    key={player.id}
+                    className={`
+                      mb-2 flex cursor-pointer break-inside-avoid items-center gap-2 rounded-xl border border-gray-200
+                      bg-white p-2 text-sm
+                      dark:border-gray-700 dark:bg-gray-800
+                    `}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={availableIds.includes(player.id)}
+                      onChange={() => toggleAvailable(player.id)}
+                    />
+                    <span className="flex-1">{player.name}</span>
+                    <span
+                      className={`
+                        text-xs text-gray-500
+                        dark:text-gray-400
+                      `}
+                    >
+                      Elo {player.elo}
+                    </span>
+                  </label>
+                ))}
+            </div>
+          </Section>
           <Section title="Add Match">
             <form className="space-y-4">
               <div
@@ -270,7 +317,7 @@ export default function App() {
                     <h3 className="font-semibold">Team A</h3>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
-                    {teamAA.map((player) => (
+                    {teamA.map((player) => (
                       <div
                         className={`
                           rounded-xl border border-gray-200 bg-white p-2 text-sm
@@ -296,7 +343,7 @@ export default function App() {
                     <h3 className="font-semibold">Team B</h3>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
-                    {teamBB.map((player) => (
+                    {teamB.map((player) => (
                       <div
                         className={`
                           rounded-xl border border-gray-200 bg-white p-2 text-sm
