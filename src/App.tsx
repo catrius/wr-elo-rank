@@ -322,8 +322,9 @@ export default function App() {
           <Section title="Available Players" actions={<Pill>{availableIds.length} total</Pill>}>
             <div
               className={`
-                columns-2 gap-2
+                columns-1 gap-2
                 [column-fill:_balance]
+                sm:columns-2
               `}
             >
               {players &&
