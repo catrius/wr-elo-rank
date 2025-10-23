@@ -66,6 +66,14 @@ export default function App() {
     getMatchCount();
   }, [getMatchCount, getMatches, getPlayers]);
 
+  const cancelMatch = useCallback(
+    async (match: Match) => {
+      await supabase.from('match').update({ result: 'Cancel' }).eq('id', match.id);
+      refresh();
+    },
+    [refresh],
+  );
+
   const endMatch = useCallback(
     async (match: Match, result: 'A' | 'B') => {
       const meanTeamAElo = mean(match.team_a_elos);
@@ -438,7 +446,7 @@ export default function App() {
                   }}
                   disabled={disabledStart}
                 >
-                  Start Match
+                  Start
                 </button>
                 <button
                   type="button"
@@ -451,7 +459,7 @@ export default function App() {
                   `}
                   disabled={disabledSuggest}
                 >
-                  Suggest Teams
+                  Suggest
                 </button>
                 <button
                   type="button"
@@ -464,7 +472,7 @@ export default function App() {
                   `}
                   disabled={disabledSuggest}
                 >
-                  Best Teams
+                  Best
                 </button>
               </div>
             </form>
@@ -502,7 +510,28 @@ export default function App() {
                           {new Date(match.created_at).toLocaleString()}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Pill>{match.result ? `Winner: Team ${match.result}` : 'In game'}</Pill>
+                          <Pill>
+                            {match.result
+                              ? match.result === 'Cancel'
+                                ? 'Cancelled'
+                                : `Winner: Team ${match.result}`
+                              : 'In game'}
+                          </Pill>
+                          {!match.result && (
+                            <button
+                              type="button"
+                              className={`
+                                cursor-pointer rounded-full bg-red-600 px-2 py-1 text-xs text-white
+                                hover:bg-red-700
+                                disabled:opacity-50
+                              `}
+                              onClick={() => {
+                                cancelMatch(match);
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          )}
                         </div>
                       </div>
                       <div
