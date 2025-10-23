@@ -74,6 +74,15 @@ export default function App() {
     [refresh],
   );
 
+  const lastMatch = useCallback(() => {
+    const lastMatchData = matches?.[0];
+    const lastTeamA = players?.filter((player) => lastMatchData?.team_a_players.includes(player.id));
+    const lastTeamB = players?.filter((player) => lastMatchData?.team_b_players.includes(player.id));
+
+    setTeamA(lastTeamA || []);
+    setTeamB(lastTeamB || []);
+  }, [matches, players]);
+
   const endMatch = useCallback(
     async (match: Match, result: 'A' | 'B') => {
       const meanTeamAElo = mean(match.team_a_elos);
@@ -431,49 +440,65 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="flex place-content-end items-center gap-3">
-                <button
-                  type="button"
-                  className={`
-                    cursor-pointer rounded-xl bg-indigo-600 px-4 py-2 text-white
-                    hover:bg-indigo-700
-                    disabled:cursor-not-allowed disabled:opacity-50
-                  `}
-                  onClick={() => {
-                    createMatch().then(() => {
-                      refresh();
-                    });
-                  }}
-                  disabled={disabledStart}
-                >
-                  Start
-                </button>
-                <button
-                  type="button"
-                  onClick={() => suggestTeams(20)}
-                  className={`
-                    cursor-pointer rounded-xl border border-gray-200 px-4 py-2
-                    hover:bg-gray-50
-                    disabled:cursor-not-allowed disabled:opacity-50
-                    dark:border-gray-700 dark:hover:bg-gray-800
-                  `}
-                  disabled={disabledSuggest}
-                >
-                  Shuffle
-                </button>
-                <button
-                  type="button"
-                  onClick={() => suggestTeams(0)}
-                  className={`
-                    cursor-pointer rounded-xl border border-gray-200 px-4 py-2
-                    hover:bg-gray-50
-                    disabled:cursor-not-allowed disabled:opacity-50
-                    dark:border-gray-700 dark:hover:bg-gray-800
-                  `}
-                  disabled={disabledSuggest}
-                >
-                  Best
-                </button>
+              <div className="flex flex-col place-content-end gap-3">
+                <div className="flex place-content-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => suggestTeams(20)}
+                    className={`
+                      cursor-pointer rounded-xl border border-gray-200 px-4 py-2
+                      hover:bg-gray-50
+                      disabled:cursor-not-allowed disabled:opacity-50
+                      dark:border-gray-700 dark:hover:bg-gray-800
+                    `}
+                    disabled={disabledSuggest}
+                  >
+                    Shuffle
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => suggestTeams(0)}
+                    className={`
+                      cursor-pointer rounded-xl border border-gray-200 px-4 py-2
+                      hover:bg-gray-50
+                      disabled:cursor-not-allowed disabled:opacity-50
+                      dark:border-gray-700 dark:hover:bg-gray-800
+                    `}
+                    disabled={disabledSuggest}
+                  >
+                    Best
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => lastMatch()}
+                    className={`
+                      cursor-pointer rounded-xl border border-gray-200 px-4 py-2
+                      hover:bg-gray-50
+                      disabled:cursor-not-allowed disabled:opacity-50
+                      dark:border-gray-700 dark:hover:bg-gray-800
+                    `}
+                  >
+                    Rematch
+                  </button>
+                </div>
+                <div className="flex place-content-end gap-3">
+                  <button
+                    type="button"
+                    className={`
+                      cursor-pointer rounded-xl bg-indigo-600 px-4 py-2 text-white
+                      hover:bg-indigo-700
+                      disabled:cursor-not-allowed disabled:opacity-50
+                    `}
+                    onClick={() => {
+                      createMatch().then(() => {
+                        refresh();
+                      });
+                    }}
+                    disabled={disabledStart}
+                  >
+                    Start
+                  </button>
+                </div>
               </div>
             </form>
           </Section>
