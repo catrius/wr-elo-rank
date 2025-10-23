@@ -238,7 +238,7 @@ export default function App() {
   );
 
   useEffect(() => {
-    suggestTeams();
+    suggestTeams(0);
   }, [suggestTeams]);
 
   useEffect(() => {
