@@ -528,7 +528,7 @@ export default function App() {
                     dark:text-gray-300
                   `}
                 >
-                  No matches yet. Add your first one!
+                  No matches yet. Start our first one!
                 </div>
               ) : (
                 <ul className="space-y-3">
