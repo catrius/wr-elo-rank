@@ -604,11 +604,9 @@ export default function App() {
                                 const diffStr = diff >= 0 ? `+${diff}` : diff;
                                 return (
                                   <li key={id}>
-                                    <span>{find(players, { id })?.name}</span>
+                                    <span className="mr-1">{find(players, { id })?.name}</span>
                                     {newElo && elo && (
-                                      <Pill>
-                                        <span className={diff >= 0 ? 'text-green-700' : 'text-red-700'}>{diffStr}</span>
-                                      </Pill>
+                                      <span className={diff >= 0 ? 'text-green-700' : 'text-red-700'}>{diffStr}</span>
                                     )}
                                   </li>
                                 );
@@ -640,11 +638,9 @@ export default function App() {
                                 const diffStr = diff >= 0 ? `+${diff}` : diff;
                                 return (
                                   <li key={id}>
-                                    <span>{find(players, { id })?.name}</span>
+                                    <span className="mr-1">{find(players, { id })?.name}</span>
                                     {newElo && elo && (
-                                      <Pill>
-                                        <span className={diff >= 0 ? 'text-green-700' : 'text-red-700'}>{diffStr}</span>
-                                      </Pill>
+                                      <span className={diff >= 0 ? 'text-green-700' : 'text-red-700'}>{diffStr}</span>
                                     )}
                                   </li>
                                 );
