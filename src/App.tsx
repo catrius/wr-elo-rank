@@ -4,7 +4,7 @@ import { sampleSize, mean, zipWith, orderBy, meanBy, sumBy, zip } from 'es-toolk
 import supabase from '@/lib/supabase.ts';
 import useSupaQuery from '@/hooks/useSupaQuery.ts';
 import type { Player, Match } from '@/types/common.ts';
-import { find, some } from 'es-toolkit/compat';
+import { find, some, isNumber, isNaN } from 'es-toolkit/compat';
 import Pill from '@/components/Pill';
 import Section from '@/components/Section.tsx';
 
@@ -392,7 +392,10 @@ export default function App() {
                 ))}
             </div>
           </Section>
-          <Section title="New Match" actions={eloDiff ? <Pill>{`Diff ${eloDiff}`}</Pill> : null}>
+          <Section
+            title="New Match"
+            actions={isNumber(eloDiff) && !isNaN(eloDiff) ? <Pill>{`Diff ${eloDiff}`}</Pill> : null}
+          >
             <form className="space-y-4">
               <div
                 className={`
