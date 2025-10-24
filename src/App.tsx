@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import EloRank from 'elo-rank';
-import { sampleSize, mean, zipWith, orderBy, meanBy, sumBy } from 'es-toolkit';
+import { sampleSize, mean, zipWith, orderBy, meanBy, sumBy, zip } from 'es-toolkit';
 import supabase from '@/lib/supabase.ts';
 import useSupaQuery from '@/hooks/useSupaQuery.ts';
 import type { Player, Match } from '@/types/common.ts';
@@ -34,6 +34,10 @@ export default function App() {
   const [teamA, setTeamA] = useState<Player[]>([]);
   const [teamB, setTeamB] = useState<Player[]>([]);
   const [availableIds, setAvailableIds] = useState<number[]>([]);
+
+  const averageTeamAElos = useMemo(() => Math.round(meanBy(teamA, (player) => player.elo)), [teamA]);
+  const averageTeamBElos = useMemo(() => Math.round(meanBy(teamB, (player) => player.elo)), [teamB]);
+  const eloDiff = useMemo(() => Math.abs(averageTeamAElos - averageTeamBElos), [averageTeamAElos, averageTeamBElos]);
 
   const available = useMemo(() => {
     if (!players) {
@@ -388,7 +392,7 @@ export default function App() {
                 ))}
             </div>
           </Section>
-          <Section title="New Match">
+          <Section title="New Match" actions={eloDiff ? <Pill>{`Diff ${eloDiff}`}</Pill> : null}>
             <form className="space-y-4">
               <div
                 className={`
@@ -405,7 +409,7 @@ export default function App() {
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="font-semibold">Team A</h3>
-                    {teamA.length > 0 && <Pill>{`Avg ${Math.round(meanBy(teamA, (player) => player.elo))}`}</Pill>}
+                    {teamA.length > 0 && <Pill>{`Avg ${averageTeamAElos}`}</Pill>}
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     {teamA.map((player) => (
@@ -432,7 +436,7 @@ export default function App() {
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="font-semibold">Team B</h3>
-                    {teamB.length > 0 && <Pill>{`Avg ${Math.round(meanBy(teamB, (player) => player.elo))}`}</Pill>}
+                    {teamB.length > 0 && <Pill>{`Avg ${averageTeamBElos}`}</Pill>}
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     {teamB.map((player) => (
@@ -594,9 +598,22 @@ export default function App() {
                         <div>
                           <div className="mb-1 font-medium">Team A</div>
                           <ul className="mb-2 list-inside list-disc space-y-0.5">
-                            {match.team_a_players.map((id) => (
-                              <li key={id}>{find(players, { id })?.name}</li>
-                            ))}
+                            {zip(match.team_a_players, match.team_a_new_elos || [], match.team_a_elos).map(
+                              ([id, newElo, elo]) => {
+                                const diff = newElo - elo;
+                                const diffStr = diff >= 0 ? `+${diff}` : diff;
+                                return (
+                                  <li key={id}>
+                                    <span>{find(players, { id })?.name}</span>
+                                    {newElo && elo && (
+                                      <Pill>
+                                        <span className={diff >= 0 ? 'text-green-700' : 'text-red-700'}>{diffStr}</span>
+                                      </Pill>
+                                    )}
+                                  </li>
+                                );
+                              },
+                            )}
                           </ul>
                           {!match.result && (
                             <button
@@ -617,9 +634,22 @@ export default function App() {
                         <div>
                           <div className="mb-1 font-medium">Team B</div>
                           <ul className="mb-2 list-inside list-disc space-y-0.5">
-                            {match.team_b_players.map((id) => (
-                              <li key={id}>{find(players, { id })?.name}</li>
-                            ))}
+                            {zip(match.team_b_players, match.team_b_new_elos || [], match.team_b_elos).map(
+                              ([id, newElo, elo]) => {
+                                const diff = newElo - elo;
+                                const diffStr = diff >= 0 ? `+${diff}` : diff;
+                                return (
+                                  <li key={id}>
+                                    <span>{find(players, { id })?.name}</span>
+                                    {newElo && elo && (
+                                      <Pill>
+                                        <span className={diff >= 0 ? 'text-green-700' : 'text-red-700'}>{diffStr}</span>
+                                      </Pill>
+                                    )}
+                                  </li>
+                                );
+                              },
+                            )}
                           </ul>
                           {!match.result && (
                             <button
