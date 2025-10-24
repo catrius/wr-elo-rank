@@ -297,7 +297,7 @@ export default function App() {
         </header>
 
         {/* Leaderboard */}
-        <Section title="Leaderboard">
+        <Section title="Elo Ratings">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead
@@ -388,7 +388,7 @@ export default function App() {
                 ))}
             </div>
           </Section>
-          <Section title="Add Match">
+          <Section title="New Match">
             <form className="space-y-4">
               <div
                 className={`
