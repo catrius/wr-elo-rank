@@ -315,6 +315,8 @@ export default function App() {
                   <th className="px-3 py-2 text-left font-semibold">Player</th>
                   <th className="px-3 py-2 text-right font-semibold">Elo</th>
                   <th className="px-3 py-2 text-right font-semibold">Wins</th>
+                  <th className="px-3 py-2 text-right font-semibold">Losses</th>
+                  <th className="px-3 py-2 text-right font-semibold">Total</th>
                   <th className="px-3 py-2 text-right font-semibold">Win Rate</th>
                 </tr>
               </thead>
@@ -338,6 +340,8 @@ export default function App() {
                     <td className="px-3 py-2">{row.name}</td>
                     <td className="px-3 py-2 text-right">{row.elo}</td>
                     <td className="px-3 py-2 text-right">{row.win}</td>
+                    <td className="px-3 py-2 text-right">{row.total - row.win}</td>
+                    <td className="px-3 py-2 text-right">{row.total}</td>
                     <td className="px-3 py-2 text-right">
                       {row.total ? ((row.win / row.total) * 100).toFixed(1) : 0}%
                     </td>
