@@ -47,8 +47,8 @@ export default function App() {
   }, [availableIds, players]);
 
   const disabledStart = useMemo(
-    () => some(matches, (match) => !match.result) || teamA.length === 0,
-    [matches, teamA.length],
+    () => available.length % 2 === 1 || some(matches, (match) => !match.result) || teamA.length === 0,
+    [available.length, matches, teamA.length],
   );
 
   const disabledSuggest = useMemo(() => availableIds.length < 2, [availableIds.length]);
@@ -205,10 +205,16 @@ export default function App() {
         setTeamB([]);
         return;
       }
+
       const candidates = sampleSize(available, total);
       const totalElo = sumBy(available, (player) => player.elo);
       const sizeA = Math.ceil(total / 2);
       const target = (totalElo * sizeA) / total;
+
+      // locate the indices of the special players inside the current candidates pool
+      const i3 = candidates.findIndex((p) => p.id === 3);
+      const i7 = candidates.findIndex((p) => p.id === 7);
+      const havePair = i3 !== -1 && i7 !== -1;
 
       let bestDiff = Infinity;
       let bestChoiceIndexes: number[] = [];
@@ -217,6 +223,15 @@ export default function App() {
       // DFS to choose exactly `sizeA` players whose Elo sum is closest to `target`
       const dfs = (index: number, chosenIdxs: number[], chosenSum: number) => {
         if (chosenIdxs.length === sizeA) {
+          if (havePair) {
+            const aHas3 = chosenIdxs.includes(i3);
+            const aHas7 = chosenIdxs.includes(i7);
+            if (aHas3 !== aHas7) {
+              // one is in A and the other is in B -> invalid split
+              return;
+            }
+          }
+
           const diff = Math.abs(chosenSum - target);
 
           if (diff <= tolerance) {
