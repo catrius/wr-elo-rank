@@ -7,6 +7,10 @@ import type { Player, Match } from '@/types/common.ts';
 import { find, some, isNumber, isNaN } from 'es-toolkit/compat';
 import Pill from '@/components/Pill';
 import Section from '@/components/Section.tsx';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 
 const eloRank = new EloRank(15);
 
@@ -455,6 +459,9 @@ export default function App() {
             title="New Match"
             actions={isNumber(eloDiff) && !isNaN(eloDiff) ? <Pill>{`Diff ${eloDiff}`}</Pill> : null}
           >
+            <div className="mb-4 text-sm">
+              To change a player&#39;s team, tap and hold on his name then drop him on the opposite team.
+            </div>
             <form className="space-y-4">
               <div
                 className={`
@@ -619,14 +626,14 @@ export default function App() {
                             dark:text-gray-300
                           `}
                         >
-                          {new Date(match.created_at).toLocaleString()}
+                          {dayjs.utc(match.created_at).local().format('DD/MM/YYYY HH:mm')}
                         </div>
                         <div className="flex items-center gap-2">
                           <Pill>
                             {match.result
                               ? match.result === 'Cancel'
                                 ? 'Cancelled'
-                                : `Winner: Team ${match.result}`
+                                : `${match.result} won`
                               : 'In game'}
                           </Pill>
                           {!match.result && (
