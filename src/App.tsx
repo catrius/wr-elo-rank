@@ -418,7 +418,7 @@ export default function App() {
             md:mt-10 md:grid-cols-2
           `}
         >
-          <Section title="Available Players" actions={<Pill>{availableIds.length} total</Pill>}>
+          <Section title="Available Players" actions={<Pill>Total {availableIds.length}</Pill>}>
             <div
               className={`
                 columns-1 gap-2
