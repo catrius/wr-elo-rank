@@ -34,6 +34,43 @@ export default function App() {
   const [teamA, setTeamA] = useState<Player[]>([]);
   const [teamB, setTeamB] = useState<Player[]>([]);
   const [availableIds, setAvailableIds] = useState<number[]>([]);
+  const [dragging, setDragging] = useState<{ player: Player; from: 'A' | 'B' } | null>(null);
+  const handleDragStart = useCallback(
+    (player: Player, from: 'A' | 'B') => (e: any) => {
+      // Set some data to satisfy HTML5 DnD requirements
+      try {
+        e.dataTransfer?.setData('text/plain', String(player.id));
+      } catch {
+        /* empty */
+      }
+      setDragging({ player, from });
+    },
+    [],
+  );
+
+  const handleDragOverPanel = useCallback((e: any) => {
+    // Necessary to allow dropping
+    e.preventDefault();
+  }, []);
+
+  const handleDropTo = useCallback(
+    (to: 'A' | 'B') => (e: any) => {
+      e.preventDefault();
+      if (!dragging) return;
+      if (dragging.from === to) return; // no-op if dropped back to same team
+
+      if (to === 'A') {
+        setTeamB((prev) => prev.filter((p) => p.id !== dragging.player.id));
+        setTeamA((prev) => (prev.some((p) => p.id === dragging.player.id) ? prev : [...prev, dragging.player]));
+      } else {
+        setTeamA((prev) => prev.filter((p) => p.id !== dragging.player.id));
+        setTeamB((prev) => (prev.some((p) => p.id === dragging.player.id) ? prev : [...prev, dragging.player]));
+      }
+
+      setDragging(null);
+    },
+    [dragging],
+  );
 
   const averageTeamAElos = useMemo(() => Math.round(meanBy(teamA, (player) => player.elo)), [teamA]);
   const averageTeamBElos = useMemo(() => Math.round(meanBy(teamB, (player) => player.elo)), [teamB]);
@@ -47,8 +84,13 @@ export default function App() {
   }, [availableIds, players]);
 
   const disabledStart = useMemo(
-    () => available.length % 2 === 1 || some(matches, (match) => !match.result) || teamA.length === 0,
-    [available.length, matches, teamA.length],
+    () =>
+      available.length % 2 === 1 ||
+      some(matches, (match) => !match.result) ||
+      teamA.length === 0 ||
+      teamB.length === 0 ||
+      teamA.length !== teamB.length,
+    [available.length, matches, teamA.length, teamB.length],
   );
 
   const disabledSuggest = useMemo(() => availableIds.length < 2, [availableIds.length]);
@@ -426,6 +468,8 @@ export default function App() {
                     rounded-xl border border-gray-200 p-3
                     dark:border-gray-700
                   `}
+                  onDragOver={handleDragOverPanel}
+                  onDrop={handleDropTo('A')}
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="font-semibold">Team A</h3>
@@ -435,11 +479,14 @@ export default function App() {
                     {teamA.map((player) => (
                       <div
                         className={`
-                          rounded-xl border border-gray-200 bg-white p-2 text-sm
+                          cursor-grab rounded-xl border border-gray-200 bg-white p-2 text-sm
                           focus:ring-2 focus:ring-indigo-500 focus:outline-none
+                          active:cursor-grabbing
                           dark:border-gray-700 dark:bg-gray-800
                         `}
                         key={player.id}
+                        draggable
+                        onDragStart={handleDragStart(player, 'A')}
                       >
                         {player.name}
                       </div>
@@ -453,6 +500,8 @@ export default function App() {
                     rounded-xl border border-gray-200 p-3
                     dark:border-gray-700
                   `}
+                  onDragOver={handleDragOverPanel}
+                  onDrop={handleDropTo('B')}
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="font-semibold">Team B</h3>
@@ -462,11 +511,13 @@ export default function App() {
                     {teamB.map((player) => (
                       <div
                         className={`
-                          rounded-xl border border-gray-200 bg-white p-2 text-sm
+                          cursor-grab rounded-xl border border-gray-200 bg-white p-2 text-sm
                           focus:ring-2 focus:ring-indigo-500 focus:outline-none
                           dark:border-gray-700 dark:bg-gray-800
                         `}
                         key={player.id}
+                        draggable
+                        onDragStart={handleDragStart(player, 'B')}
                       >
                         {player.name}
                       </div>
