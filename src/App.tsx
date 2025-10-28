@@ -558,7 +558,7 @@ export default function App() {
                       className={`
                         rounded-xl border border-gray-200 p-3
                         dark:border-gray-700
-                        ${match.result === 'Cancel' && 'bg-neutral-300'}
+                        ${match.result === 'Cancel' && 'opacity-50'}
                       `}
                     >
                       <div className="flex items-center justify-between">
