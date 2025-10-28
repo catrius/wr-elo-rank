@@ -678,7 +678,7 @@ export default function App() {
                       className={`
                         rounded-xl border border-gray-200 p-3
                         dark:border-gray-700
-                        ${match.result === 'Cancelled' && 'opacity-50'}
+                        ${(match.result === 'Cancelled' || match.result === 'Reverted') && 'opacity-50'}
                       `}
                     >
                       <div className="flex items-center justify-between">
