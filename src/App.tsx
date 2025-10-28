@@ -93,8 +93,6 @@ export default function App() {
 
       setTeamA(lastTeamA || []);
       setTeamB(lastTeamB || []);
-
-      setAvailableIds([...(lastMatchData?.team_a_players || []), ...(lastMatchData?.team_b_players || [])]);
     },
     [matches, players],
   );
@@ -560,6 +558,7 @@ export default function App() {
                       className={`
                         rounded-xl border border-gray-200 p-3
                         dark:border-gray-700
+                        ${match.result === 'Cancel' && 'bg-neutral-300'}
                       `}
                     >
                       <div className="flex items-center justify-between">
