@@ -125,7 +125,7 @@ export default function App() {
 
   const cancelMatch = useCallback(
     async (match: Match) => {
-      await supabase.from('match').update({ result: 'Cancel' }).eq('id', match.id);
+      await supabase.from('match').update({ result: 'Cancelled' }).eq('id', match.id);
       refresh();
     },
     [refresh],
@@ -229,6 +229,68 @@ export default function App() {
         .update({ result, team_a_new_elos: teamANewElos, team_b_new_elos: teamBNewElos })
         .eq('id', match.id);
 
+      await supabase.from('player').upsert([...updatedAPlayers, ...updatedBPlayers]);
+
+      refresh();
+    },
+    [players, refresh],
+  );
+
+  const revertMatch = useCallback(
+    async (match: Match) => {
+      if (!(match.result === 'A' || match.result === 'B') || !match.team_a_new_elos || !match.team_b_new_elos) {
+        return;
+      }
+
+      if (!window.confirm('Are you sure you want to revert this match?')) {
+        return;
+      }
+
+      const updatedAPlayers: Partial<Player>[] = zipWith(
+        match.team_a_players,
+        match.team_a_elos,
+        match.team_a_new_elos,
+        (id: number, elo: number, newElo: number) => {
+          const player = find(players, { id });
+          if (!player) {
+            return { id };
+          }
+
+          const revertedElo = newElo - elo;
+          const won = match.result === 'A';
+
+          return {
+            id,
+            total: player.total - 1,
+            elo: player.elo - revertedElo,
+            win: won ? player.win - 1 : player.win,
+          };
+        },
+      );
+
+      const updatedBPlayers: Partial<Player>[] = zipWith(
+        match.team_b_players,
+        match.team_b_elos,
+        match.team_b_new_elos,
+        (id: number, elo: number, newElo: number) => {
+          const player = find(players, { id });
+          if (!player) {
+            return { id };
+          }
+
+          const revertedElo = newElo - elo;
+          const won = match.result === 'B';
+
+          return {
+            id,
+            total: player.total - 1,
+            elo: player.elo - revertedElo,
+            win: won ? player.win - 1 : player.win,
+          };
+        },
+      );
+
+      await supabase.from('match').update({ result: 'Reverted' }).eq('id', match.id);
       await supabase.from('player').upsert([...updatedAPlayers, ...updatedBPlayers]);
 
       refresh();
@@ -616,26 +678,37 @@ export default function App() {
                       className={`
                         rounded-xl border border-gray-200 p-3
                         dark:border-gray-700
-                        ${match.result === 'Cancel' && 'opacity-50'}
+                        ${match.result === 'Cancelled' && 'opacity-50'}
                       `}
                     >
                       <div className="flex items-center justify-between">
+                        <div className="flex flex-1/4 justify-start gap-2">
+                          {match.result !== 'A' && match.result !== 'B' && <Pill>{match.result || 'In game'}</Pill>}
+                          {(match.result === 'A' || match.result === 'B') && (
+                            <button
+                              type="button"
+                              className={`
+                                cursor-pointer rounded-full bg-red-600 px-2 py-1 text-xs text-white
+                                hover:bg-red-700
+                                disabled:opacity-50
+                              `}
+                              onClick={() => {
+                                revertMatch(match);
+                              }}
+                            >
+                              Revert
+                            </button>
+                          )}
+                        </div>
                         <div
                           className={`
-                            text-sm text-gray-600
+                            flex-1/2 justify-center text-center text-sm text-gray-600
                             dark:text-gray-300
                           `}
                         >
-                          {dayjs.utc(match.created_at).local().format('DD/MM/YYYY HH:mm')}
+                          <span>{dayjs.utc(match.created_at).local().format('DD/MM/YYYY HH:mm')}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Pill>
-                            {match.result
-                              ? match.result === 'Cancel'
-                                ? 'Cancelled'
-                                : `${match.result} won`
-                              : 'In game'}
-                          </Pill>
+                        <div className="flex flex-1/4 justify-end gap-2">
                           {!match.result && (
                             <button
                               type="button"
