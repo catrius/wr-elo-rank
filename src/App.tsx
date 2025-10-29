@@ -476,19 +476,19 @@ export default function App() {
 
                   <th className="px-3 py-2 text-left font-semibold">
                     <button type="button" onClick={() => toggleSort('name')} className="inline-flex items-center gap-1">
-                      Player {sort.key === 'name' ? (sort.dir === 'asc' ? '▲' : '▼') : '⏵'}
+                      Player {sort.key === 'name' ? sort.dir === 'asc' ? <>&#9650;</> : <>&#9660;</> : <>&#9654;</>}
                     </button>
                   </th>
 
                   <th className="px-3 py-2 text-right font-semibold">
                     <button type="button" onClick={() => toggleSort('elo')} className="inline-flex items-center gap-1">
-                      Elo {sort.key === 'elo' ? (sort.dir === 'asc' ? '▲' : '▼') : '▶'}
+                      Elo {sort.key === 'elo' ? sort.dir === 'asc' ? <>&#9650;</> : <>&#9660;</> : <>&#9654;</>}
                     </button>
                   </th>
 
                   <th className="px-3 py-2 text-right font-semibold">
                     <button type="button" onClick={() => toggleSort('win')} className="inline-flex items-center gap-1">
-                      Wins {sort.key === 'win' ? (sort.dir === 'asc' ? '▲' : '▼') : '▶'}
+                      Wins {sort.key === 'win' ? sort.dir === 'asc' ? <>&#9650;</> : <>&#9660;</> : <>&#9654;</>}
                     </button>
                   </th>
 
@@ -498,7 +498,7 @@ export default function App() {
                       onClick={() => toggleSort('losses')}
                       className="inline-flex items-center gap-1"
                     >
-                      Losses {sort.key === 'losses' ? (sort.dir === 'asc' ? '▲' : '▼') : '▶'}
+                      Losses {sort.key === 'losses' ? sort.dir === 'asc' ? <>&#9650;</> : <>&#9660;</> : <>&#9654;</>}
                     </button>
                   </th>
 
@@ -508,7 +508,7 @@ export default function App() {
                       onClick={() => toggleSort('total')}
                       className="inline-flex items-center gap-1"
                     >
-                      Total {sort.key === 'total' ? (sort.dir === 'asc' ? '▲' : '▼') : '▶'}
+                      Total {sort.key === 'total' ? sort.dir === 'asc' ? <>&#9650;</> : <>&#9660;</> : <>&#9654;</>}
                     </button>
                   </th>
 
@@ -518,7 +518,8 @@ export default function App() {
                       onClick={() => toggleSort('winrate')}
                       className="inline-flex items-center gap-1"
                     >
-                      Win Rate {sort.key === 'winrate' ? (sort.dir === 'asc' ? '▲' : '▼') : '▶'}
+                      Win Rate{' '}
+                      {sort.key === 'winrate' ? sort.dir === 'asc' ? <>&#9650;</> : <>&#9660;</> : <>&#9654;</>}
                     </button>
                   </th>
                 </tr>
