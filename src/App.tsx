@@ -14,6 +14,8 @@ dayjs.extend(utc);
 
 const eloRank = new EloRank(15);
 
+type SortKey = 'name' | 'elo' | 'win' | 'losses' | 'total' | 'winrate';
+
 export default function App() {
   const getPlayersCallback = useCallback(
     async () => supabase.from('player').select().order('elo', { ascending: false }),
@@ -21,6 +23,43 @@ export default function App() {
   );
   const [getPlayers, { data: playerData }] = useSupaQuery(getPlayersCallback);
   const players = playerData as Player[] | null;
+
+  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({
+    key: 'elo',
+    dir: 'desc',
+  });
+
+  const toggleSort = useCallback((key: SortKey) => {
+    setSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: key === 'name' ? 'asc' : 'desc' },
+    );
+  }, []);
+
+  const sortedPlayers = useMemo(() => {
+    if (!players) return [];
+    const iteratee = (p: Player) => {
+      switch (sort.key) {
+        case 'losses':
+          return p.total - p.win;
+        case 'winrate':
+          return p.total ? p.win / p.total : -Infinity; // puts 0-games at bottom for desc
+        case 'name':
+          return p.name;
+        case 'elo':
+          return p.elo;
+        case 'win':
+          return p.win;
+        case 'total':
+          return p.total;
+        default:
+          return 0;
+      }
+    };
+    // Second key 'name' for stable/pleasant ordering on ties
+    return orderBy(players, [iteratee, (p) => p.name], [sort.dir, 'asc']);
+  }, [players, sort]);
 
   const getMatchesCallback = useCallback(
     async () => supabase.from('match').select().order('created_at', { ascending: false }).limit(20),
@@ -433,16 +472,58 @@ export default function App() {
               >
                 <tr>
                   <th className="px-3 py-2 text-left font-semibold">#</th>
-                  <th className="px-3 py-2 text-left font-semibold">Player</th>
-                  <th className="px-3 py-2 text-right font-semibold">Elo</th>
-                  <th className="px-3 py-2 text-right font-semibold">Wins</th>
-                  <th className="px-3 py-2 text-right font-semibold">Losses</th>
-                  <th className="px-3 py-2 text-right font-semibold">Total</th>
-                  <th className="px-3 py-2 text-right font-semibold">Win Rate</th>
+
+                  <th className="px-3 py-2 text-left font-semibold">
+                    <button type="button" onClick={() => toggleSort('name')} className="inline-flex items-center gap-1">
+                      Player {sort.key === 'name' ? (sort.dir === 'asc' ? '▲' : '▼') : '⏵'}
+                    </button>
+                  </th>
+
+                  <th className="px-3 py-2 text-right font-semibold">
+                    <button type="button" onClick={() => toggleSort('elo')} className="inline-flex items-center gap-1">
+                      Elo {sort.key === 'elo' ? (sort.dir === 'asc' ? '▲' : '▼') : '▶'}
+                    </button>
+                  </th>
+
+                  <th className="px-3 py-2 text-right font-semibold">
+                    <button type="button" onClick={() => toggleSort('win')} className="inline-flex items-center gap-1">
+                      Wins {sort.key === 'win' ? (sort.dir === 'asc' ? '▲' : '▼') : '▶'}
+                    </button>
+                  </th>
+
+                  <th className="px-3 py-2 text-right font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('losses')}
+                      className="inline-flex items-center gap-1"
+                    >
+                      Losses {sort.key === 'losses' ? (sort.dir === 'asc' ? '▲' : '▼') : '▶'}
+                    </button>
+                  </th>
+
+                  <th className="px-3 py-2 text-right font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('total')}
+                      className="inline-flex items-center gap-1"
+                    >
+                      Total {sort.key === 'total' ? (sort.dir === 'asc' ? '▲' : '▼') : '▶'}
+                    </button>
+                  </th>
+
+                  <th className="px-3 py-2 text-right font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('winrate')}
+                      className="inline-flex items-center gap-1"
+                    >
+                      Win Rate {sort.key === 'winrate' ? (sort.dir === 'asc' ? '▲' : '▼') : '▶'}
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {players?.map((row, i) => (
+                {sortedPlayers?.map((row, i) => (
                   <tr
                     key={row.id}
                     className={
