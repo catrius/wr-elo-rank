@@ -176,6 +176,8 @@ export default function App() {
       const lastTeamA = players?.filter((player) => lastMatchData?.team_a_players.includes(player.id));
       const lastTeamB = players?.filter((player) => lastMatchData?.team_b_players.includes(player.id));
 
+      setAvailableIds([...(lastMatchData?.team_a_players || []), ...(lastMatchData?.team_b_players || [])]);
+
       setTeamA(lastTeamA || []);
       setTeamB(lastTeamB || []);
     },
