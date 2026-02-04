@@ -360,9 +360,13 @@ export default function App() {
       const target = (totalElo * sizeA) / total;
 
       // locate the indices of the special players inside the current candidates pool
-      const i3 = candidates.findIndex((p) => p.id === 3);
-      const i7 = candidates.findIndex((p) => p.id === 7);
-      const havePair = i3 !== -1 && i7 !== -1;
+      const i3 = candidates.findIndex((p) => p.id === 3); // Khoai
+      const i7 = candidates.findIndex((p) => p.id === 7); // Mam
+      const haveKhoaiMamPair = i3 !== -1 && i7 !== -1;
+
+      const i2 = candidates.findIndex((p) => p.id === 2); // Nan nhan
+      const i13 = candidates.findIndex((p) => p.id === 13); // Koyote
+      const haveNhanKoPair = i2 !== -1 && i13 !== -1;
 
       let bestDiff = Infinity;
       let bestChoiceIndexes: number[] = [];
@@ -371,10 +375,19 @@ export default function App() {
       // DFS to choose exactly `sizeA` players whose Elo sum is closest to `target`
       const dfs = (index: number, chosenIdxs: number[], chosenSum: number) => {
         if (chosenIdxs.length === sizeA) {
-          if (havePair) {
+          if (haveKhoaiMamPair) {
             const aHas3 = chosenIdxs.includes(i3);
             const aHas7 = chosenIdxs.includes(i7);
             if (aHas3 !== aHas7) {
+              // one is in A and the other is in B -> invalid split
+              return;
+            }
+          }
+
+          if (haveNhanKoPair) {
+            const aHas2 = chosenIdxs.includes(i2);
+            const aHas13 = chosenIdxs.includes(i13);
+            if (aHas2 !== aHas13) {
               // one is in A and the other is in B -> invalid split
               return;
             }
