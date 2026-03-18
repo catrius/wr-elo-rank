@@ -364,9 +364,9 @@ export default function App() {
       const i7 = candidates.findIndex((p) => p.id === 7); // Mam
       const haveKhoaiMamPair = i3 !== -1 && i7 !== -1;
 
-      const i2 = candidates.findIndex((p) => p.id === 2); // Nan nhan
+      const i5 = candidates.findIndex((p) => p.id === 5); // Kudo
       const i13 = candidates.findIndex((p) => p.id === 13); // Koyote
-      const haveNhanKoPair = i2 !== -1 && i13 !== -1;
+      const haveKuKoPair = i5 !== -1 && i13 !== -1;
 
       let bestDiff = Infinity;
       let bestChoiceIndexes: number[] = [];
@@ -384,10 +384,10 @@ export default function App() {
             }
           }
 
-          if (haveNhanKoPair) {
-            const aHas2 = chosenIdxs.includes(i2);
+          if (haveKuKoPair) {
+            const aHas5 = chosenIdxs.includes(i5);
             const aHas13 = chosenIdxs.includes(i13);
-            if (aHas2 !== aHas13) {
+            if (aHas5 !== aHas13) {
               // one is in A and the other is in B -> invalid split
               return;
             }
