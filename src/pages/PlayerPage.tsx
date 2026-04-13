@@ -163,7 +163,7 @@ export default function PlayerPage() {
               if (e.key === 'Enter') handleSave();
             }}
             className={`
-              w-auto rounded border border-gray-300 bg-transparent px-2 py-1 text-2xl font-bold tracking-tight
+              min-w-0 flex-1 rounded border border-gray-300 bg-transparent px-2 py-1 text-2xl font-bold tracking-tight
               md:text-3xl
               dark:border-gray-600
             `}
@@ -173,7 +173,7 @@ export default function PlayerPage() {
             onClick={handleSave}
             disabled={saving || name.trim() === '' || name.trim() === player.name}
             className={`
-              rounded bg-blue-600 px-6 py-1.5 text-xl font-medium text-white
+              shrink-0 rounded bg-blue-600 px-6 py-1.5 text-xl font-medium text-white
               hover:bg-blue-700
               disabled:opacity-50
             `}
