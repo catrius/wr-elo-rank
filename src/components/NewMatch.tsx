@@ -1,4 +1,5 @@
 import type { Player } from '@/types/common.ts';
+import type { Streak } from '@/App.tsx';
 import { isNumber, isNaN } from 'es-toolkit/compat';
 import Pill from '@/components/Pill';
 import Section from '@/components/Section.tsx';
@@ -20,6 +21,7 @@ interface Props {
   onStart: () => void;
   disabledSuggest: boolean;
   disabledStart: boolean;
+  streaks: Record<number, Streak>;
 }
 
 export default function NewMatch({
@@ -38,6 +40,7 @@ export default function NewMatch({
   onStart,
   disabledSuggest,
   disabledStart,
+  streaks,
 }: Props) {
   return (
     <Section title="New Match" actions={isNumber(eloDiff) && !isNaN(eloDiff) ? <Pill>{`Diff ${eloDiff}`}</Pill> : null}>
@@ -59,6 +62,7 @@ export default function NewMatch({
             onDragOver={onDragOver}
             onDrop={onDropToA}
             side="A"
+            streaks={streaks}
           />
           <TeamPanel
             label="Team B"
@@ -68,6 +72,7 @@ export default function NewMatch({
             onDragOver={onDragOver}
             onDrop={onDropToB}
             side="B"
+            streaks={streaks}
           />
         </div>
 

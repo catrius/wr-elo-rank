@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Player, Match } from '@/types/common.ts';
+import type { Streak } from '@/App.tsx';
 import Section from '@/components/Section.tsx';
 import Pill from '@/components/Pill.tsx';
 import Avatar from '@/components/Avatar.tsx';
@@ -8,6 +9,7 @@ import HeadToHead from '@/components/HeadToHead.tsx';
 interface Props {
   matches: Match[];
   players: Player[] | null;
+  streaks: Record<number, Streak>;
 }
 
 interface StatCard {
@@ -184,7 +186,7 @@ function computeOilAndWater(finished: Match[], players: Player[]): StatCard | nu
   };
 }
 
-export default function PlayerSpotlight({ matches, players }: Props) {
+export default function PlayerSpotlight({ matches, players, streaks }: Props) {
   const stats = useMemo(() => {
     if (!players || players.length === 0) return [];
     const finished = completedMatches(matches);
@@ -220,8 +222,10 @@ export default function PlayerSpotlight({ matches, players }: Props) {
               {stat.label}
             </span>
             <div className="flex items-center gap-1">
-              <Avatar src={stat.player.avatar} name={stat.player.name} />
-              {stat.player2 && <Avatar src={stat.player2.avatar} name={stat.player2.name} />}
+              <Avatar src={stat.player.avatar} name={stat.player.name} streak={streaks[stat.player.id]} />
+              {stat.player2 && (
+                <Avatar src={stat.player2.avatar} name={stat.player2.name} streak={streaks[stat.player2.id]} />
+              )}
             </div>
             <span className="text-sm font-semibold">
               {stat.player.name}
@@ -252,7 +256,7 @@ export default function PlayerSpotlight({ matches, players }: Props) {
         `}
       />
 
-      <HeadToHead players={players} matches={matches} />
+      <HeadToHead players={players} matches={matches} streaks={streaks} />
     </Section>
   );
 }

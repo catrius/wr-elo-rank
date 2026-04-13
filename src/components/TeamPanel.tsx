@@ -1,4 +1,5 @@
 import type { Player } from '@/types/common.ts';
+import type { Streak } from '@/App.tsx';
 import Pill from '@/components/Pill';
 import Avatar from '@/components/Avatar.tsx';
 
@@ -10,9 +11,10 @@ interface Props {
   onDragOver: (e: any) => void;
   onDrop: (e: any) => void;
   side: 'A' | 'B';
+  streaks: Record<number, Streak>;
 }
 
-export default function TeamPanel({ label, team, averageElo, onDragStart, onDragOver, onDrop, side }: Props) {
+export default function TeamPanel({ label, team, averageElo, onDragStart, onDragOver, onDrop, side, streaks }: Props) {
   return (
     <div
       className={`
@@ -39,7 +41,7 @@ export default function TeamPanel({ label, team, averageElo, onDragStart, onDrag
             draggable
             onDragStart={onDragStart(player, side)}
           >
-            <Avatar src={player.avatar} name={player.name} />
+            <Avatar src={player.avatar} name={player.name} streak={streaks[player.id]} />
             {player.name}
           </div>
         ))}

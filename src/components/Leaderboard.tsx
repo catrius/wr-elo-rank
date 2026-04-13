@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { orderBy } from 'es-toolkit';
 import { Link } from 'react-router-dom';
 import type { Player } from '@/types/common.ts';
+import type { Streak } from '@/App.tsx';
 import Section from '@/components/Section.tsx';
 import Avatar from '@/components/Avatar.tsx';
 
@@ -12,7 +13,13 @@ function SortIndicator({ sortKey, current }: { sortKey: SortKey; current: { key:
   return current.dir === 'asc' ? <>&#9650;</> : <>&#9660;</>;
 }
 
-export default function Leaderboard({ players }: { players: Player[] | null }) {
+export default function Leaderboard({
+  players,
+  streaks,
+}: {
+  players: Player[] | null;
+  streaks: Record<number, Streak>;
+}) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({
     key: 'elo',
     dir: 'desc',
@@ -112,7 +119,7 @@ export default function Leaderboard({ players }: { players: Player[] | null }) {
                       dark:text-indigo-400
                     `}
                   >
-                    <Avatar src={row.avatar} name={row.name} />
+                    <Avatar src={row.avatar} name={row.name} streak={streaks[row.id]} />
                     {row.name}
                   </Link>
                 </td>

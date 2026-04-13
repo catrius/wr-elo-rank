@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { orderBy } from 'es-toolkit';
 import type { Player, Match } from '@/types/common.ts';
+import type { Streak } from '@/App.tsx';
 import Avatar from '@/components/Avatar.tsx';
 
 interface Props {
   players: Player[] | null;
   matches: Match[] | null;
+  streaks: Record<number, Streak>;
 }
 
 function PlayerSelect({
@@ -39,7 +41,7 @@ function PlayerSelect({
   );
 }
 
-export default function HeadToHead({ players, matches: allMatches }: Props) {
+export default function HeadToHead({ players, matches: allMatches, streaks }: Props) {
   const [playerAId, setPlayerAId] = useState<number | null>(null);
   const [playerBId, setPlayerBId] = useState<number | null>(null);
 
@@ -112,7 +114,7 @@ export default function HeadToHead({ players, matches: allMatches }: Props) {
         ) : (
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
             <div className="flex flex-col items-center gap-1">
-              <Avatar src={playerA.avatar} name={playerA.name} />
+              <Avatar src={playerA.avatar} name={playerA.name} streak={streaks[playerA.id]} />
               <span className="text-sm font-semibold">{playerA.name}</span>
               <span
                 className={`
@@ -134,7 +136,7 @@ export default function HeadToHead({ players, matches: allMatches }: Props) {
               </span>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <Avatar src={playerB.avatar} name={playerB.name} />
+              <Avatar src={playerB.avatar} name={playerB.name} streak={streaks[playerB.id]} />
               <span className="text-sm font-semibold">{playerB.name}</span>
               <span
                 className={`

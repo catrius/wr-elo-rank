@@ -13,6 +13,50 @@ import PlayerSpotlight from '@/components/PlayerSpotlight.tsx';
 
 const eloRank = new EloRank(15);
 
+const STREAK_THRESHOLD = 3;
+
+export interface Streak {
+  type: 'fire' | 'ice';
+  count: number;
+}
+
+function computeStreaks(matches: Match[]): Record<number, Streak> {
+  const finished = matches.filter((m) => m.result === 'A' || m.result === 'B');
+
+  const winFrozen: Record<number, boolean> = {};
+  const winStreaks: Record<number, number> = {};
+  const lossFrozen: Record<number, boolean> = {};
+  const lossStreaks: Record<number, number> = {};
+
+  finished.forEach((m) => {
+    const winners = m.result === 'A' ? m.team_a_players : m.team_b_players;
+    const losers = m.result === 'A' ? m.team_b_players : m.team_a_players;
+
+    winners.forEach((id) => {
+      if (!winFrozen[id]) winStreaks[id] = (winStreaks[id] || 0) + 1;
+    });
+    losers.forEach((id) => {
+      winFrozen[id] = true;
+    });
+
+    losers.forEach((id) => {
+      if (!lossFrozen[id]) lossStreaks[id] = (lossStreaks[id] || 0) + 1;
+    });
+    winners.forEach((id) => {
+      lossFrozen[id] = true;
+    });
+  });
+
+  const result: Record<number, Streak> = {};
+  Object.entries(winStreaks).forEach(([id, count]) => {
+    if (count >= STREAK_THRESHOLD) result[Number(id)] = { type: 'fire', count };
+  });
+  Object.entries(lossStreaks).forEach(([id, count]) => {
+    if (count >= STREAK_THRESHOLD) result[Number(id)] = { type: 'ice', count };
+  });
+  return result;
+}
+
 export default function App() {
   const getPlayersCallback = useCallback(
     async () => supabase.from('player').select().order('elo', { ascending: false }),
@@ -36,6 +80,8 @@ export default function App() {
   const allMatches = allMatchesData as Match[] | null;
 
   const matches = useMemo(() => allMatches?.slice(0, 10) ?? null, [allMatches]);
+
+  const streaks = useMemo(() => (allMatches ? computeStreaks(allMatches) : {}), [allMatches]);
 
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark');
 
@@ -421,7 +467,7 @@ export default function App() {
         </header>
 
         {/* Leaderboard */}
-        <Leaderboard players={players} />
+        <Leaderboard players={players} streaks={streaks} />
 
         {/* Input form */}
         <div
@@ -430,7 +476,12 @@ export default function App() {
             md:mt-10 md:grid-cols-2
           `}
         >
-          <AvailablePlayers players={players} availableIds={availableIds} onToggle={toggleAvailable} />
+          <AvailablePlayers
+            players={players}
+            availableIds={availableIds}
+            onToggle={toggleAvailable}
+            streaks={streaks}
+          />
 
           <NewMatch
             teamA={teamA}
@@ -448,10 +499,11 @@ export default function App() {
             onStart={() => createMatch().then(() => refresh())}
             disabledSuggest={disabledSuggest}
             disabledStart={disabledStart}
+            streaks={streaks}
           />
 
           {/* Spotlight */}
-          {allMatches && <PlayerSpotlight matches={allMatches} players={players} />}
+          {allMatches && <PlayerSpotlight matches={allMatches} players={players} streaks={streaks} />}
 
           {/* History */}
           {matches && (
