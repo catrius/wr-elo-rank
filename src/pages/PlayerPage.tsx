@@ -1,9 +1,14 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { upload } from '@vercel/blob/client';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import supabase from '@/lib/supabase.ts';
 import type { Player, Match } from '@/types/common.ts';
 import Avatar from '@/components/Avatar.tsx';
+
+dayjs.extend(utc);
 
 export default function PlayerPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +18,7 @@ export default function PlayerPage() {
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [chartLimit, setChartLimit] = useState<number | 'all'>(20);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchPlayer = useCallback(async () => {
@@ -40,6 +46,33 @@ export default function PlayerPage() {
     const total = completed.length;
     return { wins, losses: total - wins, total, winRate: total ? ((wins / total) * 100).toFixed(1) : '0' };
   }, [matches, playerId]);
+
+  const eloHistory = useMemo(() => {
+    const completed = matches
+      .filter((m) => (m.result === 'A' || m.result === 'B') && m.team_a_new_elos && m.team_b_new_elos)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    const points = completed.map((m) => {
+      const onTeamA = m.team_a_players.includes(playerId);
+      const players = onTeamA ? m.team_a_players : m.team_b_players;
+      const newElos = onTeamA ? m.team_a_new_elos! : m.team_b_new_elos!;
+      const idx = players.indexOf(playerId);
+      const date = dayjs.utc(m.created_at).local().format('DD/MM');
+      return { elo: newElos[idx], date };
+    });
+
+    const sliced = chartLimit === 'all' ? points : points.slice(-chartLimit);
+
+    // Only show a date label when it differs from the previous point
+    let prev = '';
+    return sliced.map((p) => {
+      const label = p.date === prev ? '' : p.date;
+      prev = p.date;
+      return { ...p, label };
+    });
+  }, [matches, playerId, chartLimit]);
+
+  const verticalDates = chartLimit === 'all' || chartLimit === 100;
 
   useEffect(() => {
     fetchPlayer();
@@ -342,6 +375,78 @@ export default function PlayerPage() {
             </div>
             <div className="text-2xl font-bold">{allTimeStats.winRate}%</div>
           </div>
+        </div>
+
+        <div className="mb-4 flex items-center justify-between">
+          <h2
+            className={`
+              text-lg font-semibold
+              md:text-xl
+            `}
+          >
+            Elo History
+          </h2>
+          <select
+            value={chartLimit}
+            onChange={(e) => {
+              const v = e.target.value;
+              setChartLimit(v === 'all' ? 'all' : Number(v));
+            }}
+            className={`
+              rounded border border-gray-300 bg-white px-3 py-1.5 text-sm
+              dark:border-gray-600 dark:bg-gray-800
+            `}
+          >
+            <option value={20}>Last 20</option>
+            <option value={50}>Last 50</option>
+            <option value={100}>Last 100</option>
+            <option value="all">All matches</option>
+          </select>
+        </div>
+        <div
+          className={`
+            mb-6 rounded-lg bg-white p-4 shadow
+            dark:bg-gray-800
+          `}
+        >
+          {eloHistory.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={eloHistory}>
+                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11 }}
+                  interval={0}
+                  angle={verticalDates ? -90 : 0}
+                  textAnchor={verticalDates ? 'end' : 'middle'}
+                  height={verticalDates ? 60 : 30}
+                />
+                <YAxis domain={['dataMin - 10', 'dataMax + 10']} tick={{ fontSize: 12 }} width={45} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                  formatter={(value) => [value, 'Elo']}
+                  labelFormatter={(_, payload) => (payload.length ? payload[0].payload.date : '')}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="elo"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <p
+              className={`
+                py-8 text-center text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              No match data available
+            </p>
+          )}
         </div>
       </div>
     </div>
