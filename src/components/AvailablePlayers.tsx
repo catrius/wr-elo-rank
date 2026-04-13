@@ -44,7 +44,7 @@ export default function AvailablePlayers({ players, availableIds, onToggle }: Pr
                   dark:text-gray-400
                 `}
               >
-                Elo {player.elo}
+                {player.elo}
               </span>
             </label>
           ))}

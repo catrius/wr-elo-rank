@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { upload } from '@vercel/blob/client';
 import supabase from '@/lib/supabase.ts';
 import type { Player, Match } from '@/types/common.ts';
 import Avatar from '@/components/Avatar.tsx';
@@ -11,6 +12,8 @@ export default function PlayerPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchPlayer = useCallback(async () => {
     const { data } = await supabase.from('player').select().eq('id', playerId).single();
@@ -42,6 +45,30 @@ export default function PlayerPage() {
     fetchPlayer();
     fetchMatches();
   }, [fetchPlayer, fetchMatches]);
+
+  const handleAvatarChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !player) return;
+
+      setUploading(true);
+      try {
+        const blob = await upload(`avatars/${player.id}-${Date.now()}`, file, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+        });
+        await supabase.from('player').update({ avatar: blob.url }).eq('id', player.id);
+        await fetchPlayer();
+      } catch (err) {
+        // eslint-disable-next-line no-alert
+        alert(`Upload failed: ${(err as Error).message}`);
+      } finally {
+        setUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    },
+    [player, fetchPlayer],
+  );
 
   const handleSave = async () => {
     if (!player || name.trim() === '' || name.trim() === player.name) return;
@@ -96,7 +123,38 @@ export default function PlayerPage() {
         </Link>
 
         <div className="mb-6 flex items-stretch gap-2">
-          <Avatar src={player.avatar} name={player.name} size="lg" />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className={`
+              group relative shrink-0 cursor-pointer self-center rounded-full
+              disabled:cursor-wait disabled:opacity-50
+            `}
+          >
+            <Avatar src={player.avatar} name={player.name} size="lg" />
+            <span
+              className={`
+                absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gray-700 text-white
+              `}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
+                <path
+                  d={
+                    'M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885' +
+                    'L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z'
+                  }
+                />
+              </svg>
+            </span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
           <input
             type="text"
             value={name}
@@ -115,7 +173,7 @@ export default function PlayerPage() {
             onClick={handleSave}
             disabled={saving || name.trim() === '' || name.trim() === player.name}
             className={`
-              rounded bg-blue-600 px-5 py-1.5 text-sm font-medium text-white
+              rounded bg-blue-600 px-6 py-1.5 text-xl font-medium text-white
               hover:bg-blue-700
               disabled:opacity-50
             `}
