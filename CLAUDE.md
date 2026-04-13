@@ -34,3 +34,8 @@ Node version: v22.20.0 (see `.nvmrc`). Package manager: npm.
 - Prettier: semicolons, single quotes, 120-char print width
 - ESLint allows nested ternaries and `alert()` calls
 - `useCallback` for handlers, `useMemo` for expensive computations
+
+## Feedback
+
+- **Always run `npm run lint` and fix all violations before considering code changes done.** Prettier and ESLint v9 flat config enforce the style rules above — don't rely on eyeballing it.
+- **Preserve existing comments during refactors.** When extracting code into new components/files, audit the original for comments and ensure each one lands in the correct destination file. Don't silently drop them.

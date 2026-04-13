@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { orderBy } from 'es-toolkit';
+import { Link } from 'react-router-dom';
 import type { Player } from '@/types/common.ts';
 import Section from '@/components/Section.tsx';
 
@@ -101,7 +102,18 @@ export default function Leaderboard({ players }: { players: Player[] | null }) {
                 }
               >
                 <td className="px-3 py-2">{i + 1}</td>
-                <td className="px-3 py-2">{row.name}</td>
+                <td className="px-3 py-2">
+                  <Link
+                    to={`/players/${row.id}`}
+                    className={`
+                      text-indigo-600
+                      hover:underline
+                      dark:text-indigo-400
+                    `}
+                  >
+                    {row.name}
+                  </Link>
+                </td>
                 <td className="px-3 py-2 text-right">{row.elo}</td>
                 <td className="px-3 py-2 text-right">{row.win}</td>
                 <td className="px-3 py-2 text-right">{row.total - row.win}</td>
