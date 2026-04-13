@@ -1,20 +1,16 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import EloRank from 'elo-rank';
-import { sampleSize, mean, zipWith, orderBy, meanBy, sumBy, zip } from 'es-toolkit';
+import { sampleSize, mean, zipWith, sumBy, meanBy } from 'es-toolkit';
 import supabase from '@/lib/supabase.ts';
 import useSupaQuery from '@/hooks/useSupaQuery.ts';
 import type { Player, Match } from '@/types/common.ts';
-import { find, some, isNumber, isNaN } from 'es-toolkit/compat';
-import Pill from '@/components/Pill';
-import Section from '@/components/Section.tsx';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-
-dayjs.extend(utc);
+import { find, some } from 'es-toolkit/compat';
+import Leaderboard from '@/components/Leaderboard.tsx';
+import AvailablePlayers from '@/components/AvailablePlayers.tsx';
+import NewMatch from '@/components/NewMatch.tsx';
+import MatchHistory from '@/components/MatchHistory.tsx';
 
 const eloRank = new EloRank(15);
-
-type SortKey = 'name' | 'elo' | 'win' | 'losses' | 'total' | 'winrate';
 
 export default function App() {
   const getPlayersCallback = useCallback(
@@ -23,43 +19,6 @@ export default function App() {
   );
   const [getPlayers, { data: playerData }] = useSupaQuery(getPlayersCallback);
   const players = playerData as Player[] | null;
-
-  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({
-    key: 'elo',
-    dir: 'desc',
-  });
-
-  const toggleSort = useCallback((key: SortKey) => {
-    setSort((prev) =>
-      prev.key === key
-        ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
-        : { key, dir: key === 'name' ? 'asc' : 'desc' },
-    );
-  }, []);
-
-  const sortedPlayers = useMemo(() => {
-    if (!players) return [];
-    const iteratee = (p: Player) => {
-      switch (sort.key) {
-        case 'losses':
-          return p.total - p.win;
-        case 'winrate':
-          return p.total ? p.win / p.total : -Infinity; // puts 0-games at bottom for desc
-        case 'name':
-          return p.name;
-        case 'elo':
-          return p.elo;
-        case 'win':
-          return p.win;
-        case 'total':
-          return p.total;
-        default:
-          return 0;
-      }
-    };
-    // Second key 'name' for stable/pleasant ordering on ties
-    return orderBy(players, [iteratee, (p) => p.name], [sort.dir, 'asc']);
-  }, [players, sort]);
 
   const getMatchesCallback = useCallback(
     async () => supabase.from('match').select().order('created_at', { ascending: false }).limit(20),
@@ -78,6 +37,7 @@ export default function App() {
   const [teamB, setTeamB] = useState<Player[]>([]);
   const [availableIds, setAvailableIds] = useState<number[]>([]);
   const [dragging, setDragging] = useState<{ player: Player; from: 'A' | 'B' } | null>(null);
+
   const handleDragStart = useCallback(
     (player: Player, from: 'A' | 'B') => (e: any) => {
       // Set some data to satisfy HTML5 DnD requirements
@@ -120,9 +80,7 @@ export default function App() {
   const eloDiff = useMemo(() => Math.abs(averageTeamAElos - averageTeamBElos), [averageTeamAElos, averageTeamBElos]);
 
   const available = useMemo(() => {
-    if (!players) {
-      return [];
-    }
+    if (!players) return [];
     return players.filter((p) => availableIds.includes(p.id));
   }, [availableIds, players]);
 
@@ -203,39 +161,25 @@ export default function App() {
 
       const teamANewWins = match.team_a_players.map((id) => {
         const player = find(players, { id });
-        if (!player) {
-          return 0;
-        }
-        if (result === 'A') {
-          return player.win + 1;
-        }
-        return player.win;
+        if (!player) return 0;
+        return result === 'A' ? player.win + 1 : player.win;
       }, []);
 
       const teamBNewWins = match.team_b_players.map((id) => {
         const player = find(players, { id });
-        if (!player) {
-          return 0;
-        }
-        if (result === 'B') {
-          return player.win + 1;
-        }
-        return player.win;
+        if (!player) return 0;
+        return result === 'B' ? player.win + 1 : player.win;
       }, []);
 
       const teamANewTotal = match.team_a_players.map((id) => {
         const player = find(players, { id });
-        if (!player) {
-          return 1;
-        }
+        if (!player) return 1;
         return player.total + 1;
       }, []);
 
       const teamBNewTotal = match.team_b_players.map((id) => {
         const player = find(players, { id });
-        if (!player) {
-          return 1;
-        }
+        if (!player) return 1;
         return player.total + 1;
       }, []);
 
@@ -294,9 +238,7 @@ export default function App() {
         match.team_a_new_elos,
         (id: number, elo: number, newElo: number) => {
           const player = find(players, { id });
-          if (!player) {
-            return { id };
-          }
+          if (!player) return { id };
 
           const revertedElo = newElo - elo;
           const won = match.result === 'A';
@@ -316,9 +258,7 @@ export default function App() {
         match.team_b_new_elos,
         (id: number, elo: number, newElo: number) => {
           const player = find(players, { id });
-          if (!player) {
-            return { id };
-          }
+          if (!player) return { id };
 
           const revertedElo = newElo - elo;
           const won = match.result === 'B';
@@ -342,9 +282,7 @@ export default function App() {
 
   const suggestTeams = useCallback(
     (tolerance = 20) => {
-      if (!players) {
-        return;
-      }
+      if (!players) return;
 
       const total = Math.min(available.length, 10);
 
@@ -374,10 +312,7 @@ export default function App() {
           if (haveKhoaiMamPair) {
             const aHas3 = chosenIdxs.includes(i3);
             const aHas7 = chosenIdxs.includes(i7);
-            if (aHas3 !== aHas7) {
-              // one is in A and the other is in B -> invalid split
-              return;
-            }
+            if (aHas3 !== aHas7) return; // one is in A and the other is in B -> invalid split
           }
 
           const diff = Math.abs(chosenSum - target);
@@ -464,99 +399,7 @@ export default function App() {
         </header>
 
         {/* Leaderboard */}
-        <Section title="Elo Ratings">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead
-                className={`
-                  bg-gray-100
-                  dark:bg-gray-800
-                `}
-              >
-                <tr>
-                  <th className="px-3 py-2 text-left font-semibold">#</th>
-
-                  <th className="px-3 py-2 text-left font-semibold">
-                    <button type="button" onClick={() => toggleSort('name')} className="inline-flex items-center gap-1">
-                      Player {sort.key === 'name' ? sort.dir === 'asc' ? <>&#9650;</> : <>&#9660;</> : <>&#9654;</>}
-                    </button>
-                  </th>
-
-                  <th className="px-3 py-2 text-right font-semibold">
-                    <button type="button" onClick={() => toggleSort('elo')} className="inline-flex items-center gap-1">
-                      Elo {sort.key === 'elo' ? sort.dir === 'asc' ? <>&#9650;</> : <>&#9660;</> : <>&#9654;</>}
-                    </button>
-                  </th>
-
-                  <th className="px-3 py-2 text-right font-semibold">
-                    <button type="button" onClick={() => toggleSort('win')} className="inline-flex items-center gap-1">
-                      Wins {sort.key === 'win' ? sort.dir === 'asc' ? <>&#9650;</> : <>&#9660;</> : <>&#9654;</>}
-                    </button>
-                  </th>
-
-                  <th className="px-3 py-2 text-right font-semibold">
-                    <button
-                      type="button"
-                      onClick={() => toggleSort('losses')}
-                      className="inline-flex items-center gap-1"
-                    >
-                      Losses {sort.key === 'losses' ? sort.dir === 'asc' ? <>&#9650;</> : <>&#9660;</> : <>&#9654;</>}
-                    </button>
-                  </th>
-
-                  <th className="px-3 py-2 text-right font-semibold">
-                    <button
-                      type="button"
-                      onClick={() => toggleSort('total')}
-                      className="inline-flex items-center gap-1"
-                    >
-                      Total {sort.key === 'total' ? sort.dir === 'asc' ? <>&#9650;</> : <>&#9660;</> : <>&#9654;</>}
-                    </button>
-                  </th>
-
-                  <th className="px-3 py-2 text-right font-semibold">
-                    <button
-                      type="button"
-                      onClick={() => toggleSort('winrate')}
-                      className="inline-flex items-center gap-1"
-                    >
-                      Win Rate{' '}
-                      {sort.key === 'winrate' ? sort.dir === 'asc' ? <>&#9650;</> : <>&#9660;</> : <>&#9654;</>}
-                    </button>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedPlayers?.map((row, i) => (
-                  <tr
-                    key={row.id}
-                    className={
-                      i % 2
-                        ? `
-                          bg-white
-                          dark:bg-gray-900
-                        `
-                        : `
-                          bg-gray-50
-                          dark:bg-gray-950
-                        `
-                    }
-                  >
-                    <td className="px-3 py-2">{i + 1}</td>
-                    <td className="px-3 py-2">{row.name}</td>
-                    <td className="px-3 py-2 text-right">{row.elo}</td>
-                    <td className="px-3 py-2 text-right">{row.win}</td>
-                    <td className="px-3 py-2 text-right">{row.total - row.win}</td>
-                    <td className="px-3 py-2 text-right">{row.total}</td>
-                    <td className="px-3 py-2 text-right">
-                      {row.total ? ((row.win / row.total) * 100).toFixed(1) : 0}%
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Section>
+        <Leaderboard players={players} />
 
         {/* Input form */}
         <div
@@ -565,347 +408,37 @@ export default function App() {
             md:mt-10 md:grid-cols-2
           `}
         >
-          <Section title="Available Players" actions={<Pill>Total {availableIds.length}</Pill>}>
-            <div
-              className={`
-                columns-1 gap-2
-                [column-fill:_balance]
-                sm:columns-2
-              `}
-            >
-              {players &&
-                orderBy(players, ['name'], ['asc'])?.map((player) => (
-                  <label
-                    key={player.id}
-                    className={`
-                      mb-2 flex cursor-pointer break-inside-avoid items-center gap-2 rounded-xl border border-gray-200
-                      bg-white p-2 text-sm
-                      dark:border-gray-700 dark:bg-gray-800
-                    `}
-                  >
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4"
-                      checked={availableIds.includes(player.id)}
-                      onChange={() => toggleAvailable(player.id)}
-                    />
-                    <span className="flex-1">{player.name}</span>
-                    <span
-                      className={`
-                        text-xs text-gray-500
-                        dark:text-gray-400
-                      `}
-                    >
-                      Elo {player.elo}
-                    </span>
-                  </label>
-                ))}
-            </div>
-          </Section>
-          <Section
-            title="New Match"
-            actions={isNumber(eloDiff) && !isNaN(eloDiff) ? <Pill>{`Diff ${eloDiff}`}</Pill> : null}
-          >
-            <div className="mb-4 text-sm">
-              To change a player&#39;s team, tap and hold on his name then drop him on the opposite team.
-            </div>
-            <form className="space-y-4">
-              <div
-                className={`
-                  grid grid-cols-1 gap-4
-                  md:grid-cols-2
-                `}
-              >
-                {/* Team A */}
-                <div
-                  className={`
-                    rounded-xl border border-gray-200 p-3
-                    dark:border-gray-700
-                  `}
-                  onDragOver={handleDragOverPanel}
-                  onDrop={handleDropTo('A')}
-                >
-                  <div className="mb-2 flex items-center justify-between">
-                    <h3 className="font-semibold">Team A</h3>
-                    {teamA.length > 0 && <Pill>{`Avg ${averageTeamAElos}`}</Pill>}
-                  </div>
-                  <div className="grid grid-cols-1 gap-2">
-                    {teamA.map((player) => (
-                      <div
-                        className={`
-                          cursor-grab rounded-xl border border-gray-200 bg-white p-2 text-sm
-                          focus:ring-2 focus:ring-indigo-500 focus:outline-none
-                          active:cursor-grabbing
-                          dark:border-gray-700 dark:bg-gray-800
-                        `}
-                        key={player.id}
-                        draggable
-                        onDragStart={handleDragStart(player, 'A')}
-                      >
-                        {player.name}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+          <AvailablePlayers players={players} availableIds={availableIds} onToggle={toggleAvailable} />
 
-                {/* Team B */}
-                <div
-                  className={`
-                    rounded-xl border border-gray-200 p-3
-                    dark:border-gray-700
-                  `}
-                  onDragOver={handleDragOverPanel}
-                  onDrop={handleDropTo('B')}
-                >
-                  <div className="mb-2 flex items-center justify-between">
-                    <h3 className="font-semibold">Team B</h3>
-                    {teamB.length > 0 && <Pill>{`Avg ${averageTeamBElos}`}</Pill>}
-                  </div>
-                  <div className="grid grid-cols-1 gap-2">
-                    {teamB.map((player) => (
-                      <div
-                        className={`
-                          cursor-grab rounded-xl border border-gray-200 bg-white p-2 text-sm
-                          focus:ring-2 focus:ring-indigo-500 focus:outline-none
-                          dark:border-gray-700 dark:bg-gray-800
-                        `}
-                        key={player.id}
-                        draggable
-                        onDragStart={handleDragStart(player, 'B')}
-                      >
-                        {player.name}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col place-content-end gap-3">
-                <div className="flex place-content-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => suggestTeams(20)}
-                    className={`
-                      cursor-pointer rounded-xl border border-gray-200 px-4 py-2
-                      hover:bg-gray-50
-                      disabled:cursor-not-allowed disabled:opacity-50
-                      dark:border-gray-700 dark:hover:bg-gray-800
-                    `}
-                    disabled={disabledSuggest}
-                  >
-                    Shuffle
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => suggestTeams(0)}
-                    className={`
-                      cursor-pointer rounded-xl border border-gray-200 px-4 py-2
-                      hover:bg-gray-50
-                      disabled:cursor-not-allowed disabled:opacity-50
-                      dark:border-gray-700 dark:hover:bg-gray-800
-                    `}
-                    disabled={disabledSuggest}
-                  >
-                    Best
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => lastMatch()}
-                    className={`
-                      cursor-pointer rounded-xl border border-gray-200 px-4 py-2
-                      hover:bg-gray-50
-                      disabled:cursor-not-allowed disabled:opacity-50
-                      dark:border-gray-700 dark:hover:bg-gray-800
-                    `}
-                  >
-                    Rematch
-                  </button>
-                </div>
-                <div className="flex place-content-end gap-3">
-                  <button
-                    type="button"
-                    className={`
-                      cursor-pointer rounded-xl bg-indigo-600 px-4 py-2 text-white
-                      hover:bg-indigo-700
-                      disabled:cursor-not-allowed disabled:opacity-50
-                    `}
-                    onClick={() => {
-                      createMatch().then(() => {
-                        refresh();
-                      });
-                    }}
-                    disabled={disabledStart}
-                  >
-                    Start
-                  </button>
-                </div>
-              </div>
-            </form>
-          </Section>
+          <NewMatch
+            teamA={teamA}
+            teamB={teamB}
+            averageTeamAElos={averageTeamAElos}
+            averageTeamBElos={averageTeamBElos}
+            eloDiff={eloDiff}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOverPanel}
+            onDropToA={handleDropTo('A')}
+            onDropToB={handleDropTo('B')}
+            onShuffle={() => suggestTeams(20)}
+            onBest={() => suggestTeams(0)}
+            onRematch={() => lastMatch()}
+            onStart={() => createMatch().then(() => refresh())}
+            disabledSuggest={disabledSuggest}
+            disabledStart={disabledStart}
+          />
 
           {/* History */}
           {matches && (
-            <Section title="Match History" actions={<Pill>{matchCount} total</Pill>}>
-              {matches.length === 0 ? (
-                <div
-                  className={`
-                    text-sm text-gray-600
-                    dark:text-gray-300
-                  `}
-                >
-                  No matches yet. Start our first one!
-                </div>
-              ) : (
-                <ul className="space-y-3">
-                  {matches.map((match) => (
-                    <li
-                      key={match.id}
-                      className={`
-                        rounded-xl border border-gray-200 p-3
-                        dark:border-gray-700
-                        ${(match.result === 'Cancelled' || match.result === 'Reverted') && 'opacity-50'}
-                      `}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-1/4 justify-start gap-2">
-                          {match.result !== 'A' && match.result !== 'B' && <Pill>{match.result || 'In game'}</Pill>}
-                          {(match.result === 'A' || match.result === 'B') && (
-                            <button
-                              type="button"
-                              className={`
-                                cursor-pointer rounded-full bg-red-600 px-2 py-1 text-xs text-white
-                                hover:bg-red-700
-                                disabled:opacity-50
-                              `}
-                              onClick={() => {
-                                revertMatch(match);
-                              }}
-                            >
-                              Revert
-                            </button>
-                          )}
-                        </div>
-                        <div
-                          className={`
-                            flex-1/2 justify-center text-center text-sm text-gray-600
-                            dark:text-gray-300
-                          `}
-                        >
-                          <span>{dayjs.utc(match.created_at).local().format('DD/MM/YYYY HH:mm')}</span>
-                        </div>
-                        <div className="flex flex-1/4 justify-end gap-2">
-                          {!match.result && (
-                            <button
-                              type="button"
-                              className={`
-                                cursor-pointer rounded-full bg-red-600 px-2 py-1 text-xs text-white
-                                hover:bg-red-700
-                                disabled:opacity-50
-                              `}
-                              onClick={() => {
-                                cancelMatch(match);
-                              }}
-                            >
-                              Cancel
-                            </button>
-                          )}
-                          {match.result && (
-                            <button
-                              type="button"
-                              className={`
-                                cursor-pointer rounded-full bg-green-600 px-2 py-1 text-xs text-white
-                                hover:bg-green-700
-                                disabled:opacity-50
-                              `}
-                              onClick={() => {
-                                lastMatch(match);
-                              }}
-                            >
-                              Rematch
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      <div
-                        className={`
-                          mt-2 grid grid-cols-1 gap-4 text-sm
-                          md:grid-cols-2
-                        `}
-                      >
-                        <div>
-                          <div className="mb-1 font-medium">Team A</div>
-                          <ul className="mb-2 list-inside list-disc space-y-0.5">
-                            {zip(match.team_a_players, match.team_a_new_elos || [], match.team_a_elos).map(
-                              ([id, newElo, elo]) => {
-                                const diff = newElo - elo;
-                                const diffStr = diff >= 0 ? `+${diff}` : diff;
-                                return (
-                                  <li key={id}>
-                                    <span className="mr-1">{find(players, { id })?.name}</span>
-                                    {newElo && elo && (
-                                      <span className={diff >= 0 ? 'text-green-700' : 'text-red-700'}>{diffStr}</span>
-                                    )}
-                                  </li>
-                                );
-                              },
-                            )}
-                          </ul>
-                          {!match.result && (
-                            <button
-                              type="button"
-                              className={`
-                                cursor-pointer rounded-xl bg-cyan-600 px-4 py-2 text-white
-                                hover:bg-cyan-700
-                                disabled:opacity-50
-                              `}
-                              onClick={() => {
-                                endMatch(match, 'A');
-                              }}
-                            >
-                              Team A wins
-                            </button>
-                          )}
-                        </div>
-                        <div>
-                          <div className="mb-1 font-medium">Team B</div>
-                          <ul className="mb-2 list-inside list-disc space-y-0.5">
-                            {zip(match.team_b_players, match.team_b_new_elos || [], match.team_b_elos).map(
-                              ([id, newElo, elo]) => {
-                                const diff = newElo - elo;
-                                const diffStr = diff >= 0 ? `+${diff}` : diff;
-                                return (
-                                  <li key={id}>
-                                    <span className="mr-1">{find(players, { id })?.name}</span>
-                                    {newElo && elo && (
-                                      <span className={diff >= 0 ? 'text-green-700' : 'text-red-700'}>{diffStr}</span>
-                                    )}
-                                  </li>
-                                );
-                              },
-                            )}
-                          </ul>
-                          {!match.result && (
-                            <button
-                              type="button"
-                              className={`
-                                cursor-pointer rounded-xl bg-cyan-600 px-4 py-2 text-white
-                                hover:bg-cyan-700
-                                disabled:opacity-50
-                              `}
-                              onClick={() => {
-                                endMatch(match, 'B');
-                              }}
-                            >
-                              Team B wins
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
+            <MatchHistory
+              matches={matches}
+              players={players}
+              matchCount={matchCount}
+              onEndMatch={endMatch}
+              onRevertMatch={revertMatch}
+              onCancelMatch={cancelMatch}
+              onRematch={lastMatch}
+            />
           )}
         </div>
       </div>
