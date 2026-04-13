@@ -22,7 +22,7 @@ export default function App() {
   const players = playerData as Player[] | null;
 
   const getMatchesCallback = useCallback(
-    async () => supabase.from('match').select().order('created_at', { ascending: false }).limit(20),
+    async () => supabase.from('match').select().order('created_at', { ascending: false }).limit(10),
     [],
   );
   const [getMatches, { data: matchesData }] = useSupaQuery(getMatchesCallback);

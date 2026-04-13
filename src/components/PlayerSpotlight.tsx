@@ -200,7 +200,7 @@ export default function PlayerSpotlight({ matches, players }: Props) {
   if (stats.length === 0) return null;
 
   return (
-    <Section title="Player Spotlight" actions={<Pill>Last 2 weeks</Pill>}>
+    <Section title="Player Spotlight" actions={<Pill>Last 2 weeks · {matches.length} matches</Pill>}>
       <div className="grid grid-cols-2 gap-3">
         {stats.map((stat) => (
           <div
