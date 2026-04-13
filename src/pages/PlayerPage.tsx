@@ -1,25 +1,46 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import supabase from '@/lib/supabase.ts';
-import type { Player } from '@/types/common.ts';
+import type { Player, Match } from '@/types/common.ts';
 
 export default function PlayerPage() {
   const { id } = useParams<{ id: string }>();
+  const playerId = Number(id);
   const [player, setPlayer] = useState<Player | null>(null);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
 
   const fetchPlayer = useCallback(async () => {
-    const { data } = await supabase.from('player').select().eq('id', Number(id)).single();
+    const { data } = await supabase.from('player').select().eq('id', playerId).single();
     if (data) {
       setPlayer(data as Player);
       setName(data.name);
     }
-  }, [id]);
+  }, [playerId]);
+
+  const fetchMatches = useCallback(async () => {
+    const { data } = await supabase
+      .from('match')
+      .select()
+      .or(`team_a_players.cs.{${playerId}},team_b_players.cs.{${playerId}}`);
+    if (data) setMatches(data as Match[]);
+  }, [playerId]);
+
+  const allTimeStats = useMemo(() => {
+    const completed = matches.filter((m) => m.result === 'A' || m.result === 'B');
+    const wins = completed.filter((m) => {
+      const onTeamA = m.team_a_players.includes(playerId);
+      return (onTeamA && m.result === 'A') || (!onTeamA && m.result === 'B');
+    }).length;
+    const total = completed.length;
+    return { wins, losses: total - wins, total, winRate: total ? ((wins / total) * 100).toFixed(1) : '0' };
+  }, [matches, playerId]);
 
   useEffect(() => {
     fetchPlayer();
-  }, [fetchPlayer]);
+    fetchMatches();
+  }, [fetchPlayer, fetchMatches]);
 
   const handleSave = async () => {
     if (!player || name.trim() === '' || name.trim() === player.name) return;
@@ -101,6 +122,14 @@ export default function PlayerPage() {
           </button>
         </div>
 
+        <h2
+          className={`
+            mb-4 text-lg font-semibold
+            md:text-xl
+          `}
+        >
+          Current Season
+        </h2>
         <div
           className={`
             mb-6 grid grid-cols-2 gap-4
@@ -172,6 +201,86 @@ export default function PlayerPage() {
             <div className="text-2xl font-bold">
               {player.total ? ((player.win / player.total) * 100).toFixed(1) : 0}%
             </div>
+          </div>
+        </div>
+
+        <h2
+          className={`
+            mb-4 text-lg font-semibold
+            md:text-xl
+          `}
+        >
+          All Time
+        </h2>
+        <div
+          className={`
+            mb-6 grid grid-cols-2 gap-4
+            sm:grid-cols-4
+          `}
+        >
+          <div
+            className={`
+              rounded-lg bg-white p-4 shadow
+              dark:bg-gray-800
+            `}
+          >
+            <div
+              className={`
+                text-sm text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              Total
+            </div>
+            <div className="text-2xl font-bold">{allTimeStats.total}</div>
+          </div>
+          <div
+            className={`
+              rounded-lg bg-white p-4 shadow
+              dark:bg-gray-800
+            `}
+          >
+            <div
+              className={`
+                text-sm text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              Wins
+            </div>
+            <div className="text-2xl font-bold">{allTimeStats.wins}</div>
+          </div>
+          <div
+            className={`
+              rounded-lg bg-white p-4 shadow
+              dark:bg-gray-800
+            `}
+          >
+            <div
+              className={`
+                text-sm text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              Losses
+            </div>
+            <div className="text-2xl font-bold">{allTimeStats.losses}</div>
+          </div>
+          <div
+            className={`
+              rounded-lg bg-white p-4 shadow
+              dark:bg-gray-800
+            `}
+          >
+            <div
+              className={`
+                text-sm text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              Win Rate
+            </div>
+            <div className="text-2xl font-bold">{allTimeStats.winRate}%</div>
           </div>
         </div>
       </div>
