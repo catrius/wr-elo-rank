@@ -94,7 +94,7 @@ export default function PlayerPage() {
           &larr; Back
         </Link>
 
-        <div className="mb-6 flex items-center gap-2">
+        <div className="mb-6 flex items-stretch gap-2">
           <input
             type="text"
             value={name}
@@ -113,7 +113,7 @@ export default function PlayerPage() {
             onClick={handleSave}
             disabled={saving || name.trim() === '' || name.trim() === player.name}
             className={`
-              rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white
+              rounded bg-blue-600 px-5 py-1.5 text-sm font-medium text-white
               hover:bg-blue-700
               disabled:opacity-50
             `}
