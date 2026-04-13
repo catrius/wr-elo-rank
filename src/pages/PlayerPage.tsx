@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import supabase from '@/lib/supabase.ts';
 import type { Player, Match } from '@/types/common.ts';
+import Avatar from '@/components/Avatar.tsx';
 
 export default function PlayerPage() {
   const { id } = useParams<{ id: string }>();
@@ -95,6 +96,7 @@ export default function PlayerPage() {
         </Link>
 
         <div className="mb-6 flex items-stretch gap-2">
+          <Avatar src={player.avatar} name={player.name} size="lg" />
           <input
             type="text"
             value={name}

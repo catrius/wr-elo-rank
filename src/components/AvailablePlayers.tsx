@@ -2,6 +2,7 @@ import { orderBy } from 'es-toolkit';
 import type { Player } from '@/types/common.ts';
 import Pill from '@/components/Pill';
 import Section from '@/components/Section.tsx';
+import Avatar from '@/components/Avatar.tsx';
 
 interface Props {
   players: Player[] | null;
@@ -35,6 +36,7 @@ export default function AvailablePlayers({ players, availableIds, onToggle }: Pr
                 checked={availableIds.includes(player.id)}
                 onChange={() => onToggle(player.id)}
               />
+              <Avatar src={player.avatar} name={player.name} />
               <span className="flex-1">{player.name}</span>
               <span
                 className={`

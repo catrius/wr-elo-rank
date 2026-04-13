@@ -6,23 +6,6 @@ export interface Database {
   __InternalSupabase: {
     PostgrestVersion: '13.0.5';
   };
-  graphql_public: {
-    Tables: Record<never, never>;
-    Views: Record<never, never>;
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json;
-          operationName?: string;
-          query?: string;
-          variables?: Json;
-        };
-        Returns: Json;
-      };
-    };
-    Enums: Record<never, never>;
-    CompositeTypes: Record<never, never>;
-  };
   public: {
     Tables: {
       match: {
@@ -63,6 +46,7 @@ export interface Database {
       };
       player: {
         Row: {
+          avatar: string | null;
           created_at: string;
           elo: number;
           id: number;
@@ -71,6 +55,7 @@ export interface Database {
           win: number;
         };
         Insert: {
+          avatar?: string | null;
           created_at?: string;
           elo?: number;
           id?: number;
@@ -79,6 +64,7 @@ export interface Database {
           win?: number;
         };
         Update: {
+          avatar?: string | null;
           created_at?: string;
           elo?: number;
           id?: number;
@@ -206,9 +192,6 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

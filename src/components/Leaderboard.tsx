@@ -3,6 +3,7 @@ import { orderBy } from 'es-toolkit';
 import { Link } from 'react-router-dom';
 import type { Player } from '@/types/common.ts';
 import Section from '@/components/Section.tsx';
+import Avatar from '@/components/Avatar.tsx';
 
 type SortKey = 'name' | 'elo' | 'win' | 'losses' | 'total' | 'winrate';
 
@@ -106,11 +107,12 @@ export default function Leaderboard({ players }: { players: Player[] | null }) {
                   <Link
                     to={`/players/${row.id}`}
                     className={`
-                      text-indigo-600
+                      inline-flex items-center gap-2 text-indigo-600
                       hover:underline
                       dark:text-indigo-400
                     `}
                   >
+                    <Avatar src={row.avatar} name={row.name} />
                     {row.name}
                   </Link>
                 </td>

@@ -1,5 +1,6 @@
 import type { Player } from '@/types/common.ts';
 import Pill from '@/components/Pill';
+import Avatar from '@/components/Avatar.tsx';
 
 interface Props {
   label: string;
@@ -29,7 +30,7 @@ export default function TeamPanel({ label, team, averageElo, onDragStart, onDrag
         {team.map((player) => (
           <div
             className={`
-              cursor-grab rounded-xl border border-gray-200 bg-white p-2 text-sm
+              flex cursor-grab items-center gap-2 rounded-xl border border-gray-200 bg-white p-2 text-sm
               focus:ring-2 focus:ring-indigo-500 focus:outline-none
               active:cursor-grabbing
               dark:border-gray-700 dark:bg-gray-800
@@ -38,6 +39,7 @@ export default function TeamPanel({ label, team, averageElo, onDragStart, onDrag
             draggable
             onDragStart={onDragStart(player, side)}
           >
+            <Avatar src={player.avatar} name={player.name} />
             {player.name}
           </div>
         ))}
