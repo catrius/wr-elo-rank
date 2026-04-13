@@ -9,6 +9,7 @@ import Leaderboard from '@/components/Leaderboard.tsx';
 import AvailablePlayers from '@/components/AvailablePlayers.tsx';
 import NewMatch from '@/components/NewMatch.tsx';
 import MatchHistory from '@/components/MatchHistory.tsx';
+import PlayerSpotlight from '@/components/PlayerSpotlight.tsx';
 
 const eloRank = new EloRank(15);
 
@@ -26,6 +27,20 @@ export default function App() {
   );
   const [getMatches, { data: matchesData }] = useSupaQuery(getMatchesCallback);
   const matches = matchesData as Match[] | null;
+
+  const twoWeeksAgo = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 14);
+    return d.toISOString();
+  }, []);
+
+  const getSpotlightMatchesCallback = useCallback(
+    async () =>
+      supabase.from('match').select().order('created_at', { ascending: false }).gte('created_at', twoWeeksAgo),
+    [twoWeeksAgo],
+  );
+  const [getSpotlightMatches, { data: spotlightMatchesData }] = useSupaQuery(getSpotlightMatchesCallback);
+  const spotlightMatches = spotlightMatchesData as Match[] | null;
 
   const getMatchCountCallback = useCallback(
     async () => supabase.from('match').select('*', { count: 'exact', head: true }),
@@ -125,7 +140,8 @@ export default function App() {
     getPlayers();
     getMatches();
     getMatchCount();
-  }, [getMatchCount, getMatches, getPlayers]);
+    getSpotlightMatches();
+  }, [getMatchCount, getMatches, getPlayers, getSpotlightMatches]);
 
   const cancelMatch = useCallback(
     async (match: Match) => {
@@ -446,6 +462,9 @@ export default function App() {
             disabledSuggest={disabledSuggest}
             disabledStart={disabledStart}
           />
+
+          {/* Spotlight */}
+          {spotlightMatches && <PlayerSpotlight matches={spotlightMatches} players={players} />}
 
           {/* History */}
           {matches && (
