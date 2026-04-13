@@ -21,12 +21,12 @@ export default function App() {
   const [getPlayers, { data: playerData }] = useSupaQuery(getPlayersCallback);
   const players = playerData as Player[] | null;
 
-  const getMatchesCallback = useCallback(
-    async () => supabase.from('match').select().order('created_at', { ascending: false }).limit(10),
+  const getAllMatchesCallback = useCallback(
+    async () => supabase.from('match').select('*', { count: 'exact' }).order('created_at', { ascending: false }),
     [],
   );
-  const [getMatches, { data: matchesData }] = useSupaQuery(getMatchesCallback);
-  const matches = matchesData as Match[] | null;
+  const [getAllMatches, { data: allMatchesData, count: matchCount }] = useSupaQuery(getAllMatchesCallback);
+  const allMatches = allMatchesData as Match[] | null;
 
   const twoWeeksAgo = useMemo(() => {
     const d = new Date();
@@ -34,19 +34,11 @@ export default function App() {
     return d.toISOString();
   }, []);
 
-  const getSpotlightMatchesCallback = useCallback(
-    async () =>
-      supabase.from('match').select().order('created_at', { ascending: false }).gte('created_at', twoWeeksAgo),
-    [twoWeeksAgo],
+  const matches = useMemo(() => allMatches?.slice(0, 10) ?? null, [allMatches]);
+  const spotlightMatches = useMemo(
+    () => allMatches?.filter((m) => m.created_at >= twoWeeksAgo) ?? null,
+    [allMatches, twoWeeksAgo],
   );
-  const [getSpotlightMatches, { data: spotlightMatchesData }] = useSupaQuery(getSpotlightMatchesCallback);
-  const spotlightMatches = spotlightMatchesData as Match[] | null;
-
-  const getMatchCountCallback = useCallback(
-    async () => supabase.from('match').select('*', { count: 'exact', head: true }),
-    [],
-  );
-  const [getMatchCount, { count: matchCount }] = useSupaQuery(getMatchCountCallback);
 
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark');
 
@@ -138,10 +130,8 @@ export default function App() {
 
   const refresh = useCallback(() => {
     getPlayers();
-    getMatches();
-    getMatchCount();
-    getSpotlightMatches();
-  }, [getMatchCount, getMatches, getPlayers, getSpotlightMatches]);
+    getAllMatches();
+  }, [getAllMatches, getPlayers]);
 
   const cancelMatch = useCallback(
     async (match: Match) => {
@@ -464,7 +454,7 @@ export default function App() {
           />
 
           {/* Spotlight */}
-          {spotlightMatches && <PlayerSpotlight matches={spotlightMatches} players={players} />}
+          {spotlightMatches && <PlayerSpotlight matches={spotlightMatches} allMatches={allMatches} players={players} />}
 
           {/* History */}
           {matches && (

@@ -3,9 +3,11 @@ import type { Player, Match } from '@/types/common.ts';
 import Section from '@/components/Section.tsx';
 import Pill from '@/components/Pill.tsx';
 import Avatar from '@/components/Avatar.tsx';
+import HeadToHead from '@/components/HeadToHead.tsx';
 
 interface Props {
   matches: Match[];
+  allMatches: Match[] | null;
   players: Player[] | null;
 }
 
@@ -126,7 +128,7 @@ function computeTeamChemistry(finished: Match[], players: Player[]): StatCard | 
   if (!pA || !pB) return null;
 
   return {
-    label: 'Team Chemistry',
+    label: 'Good Chemistry',
     player: pA,
     player2: pB,
     value: `${best.wins}W–${best.total - best.wins}L (${Math.round(best.rate * 100)}%)`,
@@ -176,14 +178,14 @@ function computeOilAndWater(finished: Match[], players: Player[]): StatCard | nu
   if (!pA || !pB) return null;
 
   return {
-    label: 'Oil & Water',
+    label: 'Bad chemistry',
     player: pA,
     player2: pB,
     value: `${worst.wins}W–${worst.total - worst.wins}L (${Math.round(worst.rate * 100)}%)`,
   };
 }
 
-export default function PlayerSpotlight({ matches, players }: Props) {
+export default function PlayerSpotlight({ matches, allMatches, players }: Props) {
   const stats = useMemo(() => {
     if (!players || players.length === 0) return [];
     const finished = completedMatches(matches);
@@ -243,6 +245,15 @@ export default function PlayerSpotlight({ matches, players }: Props) {
           </div>
         ))}
       </div>
+
+      <hr
+        className={`
+          my-4 border-gray-100
+          dark:border-gray-800
+        `}
+      />
+
+      <HeadToHead players={players} matches={allMatches} />
     </Section>
   );
 }

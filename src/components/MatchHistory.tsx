@@ -23,7 +23,7 @@ export default function MatchHistory({
   onRematch,
 }: Props) {
   return (
-    <Section title="Match History" actions={<Pill>{matchCount} total</Pill>}>
+    <Section title="Match History" actions={<Pill>{matchCount} matches</Pill>}>
       {matches.length === 0 ? (
         <div
           className={`
