@@ -29,14 +29,10 @@ export default function App() {
 
   const getAllMatchesCallback = useCallback(
     async () =>
-      supabase
-        .from('match')
-        .select('*', { count: 'exact' })
-        .gte('created_at', twoWeeksAgo)
-        .order('created_at', { ascending: false }),
+      supabase.from('match').select('*').gte('created_at', twoWeeksAgo).order('created_at', { ascending: false }),
     [twoWeeksAgo],
   );
-  const [getAllMatches, { data: allMatchesData, count: matchCount }] = useSupaQuery(getAllMatchesCallback);
+  const [getAllMatches, { data: allMatchesData }] = useSupaQuery(getAllMatchesCallback);
   const allMatches = allMatchesData as Match[] | null;
 
   const matches = useMemo(() => allMatches?.slice(0, 10) ?? null, [allMatches]);
