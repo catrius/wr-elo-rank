@@ -103,7 +103,7 @@ export default function Leaderboard({ players }: { players: Player[] | null }) {
                 }
               >
                 <td className="px-3 py-2">{i + 1}</td>
-                <td className="px-3 py-2">
+                <td className="min-w-40 px-3 py-2">
                   <Link
                     to={`/players/${row.id}`}
                     className={`
