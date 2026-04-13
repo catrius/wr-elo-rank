@@ -34,7 +34,7 @@ export default function MatchHistory({
           No matches yet. Start our first one!
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-4">
           {matches.map((match) => (
             <MatchCard
               key={match.id}

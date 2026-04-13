@@ -29,16 +29,16 @@ function TeamEloList({
   players: Player[] | null;
 }) {
   return (
-    <ul className="mb-2 space-y-0.5">
+    <ul className="mb-3 space-y-1.5">
       {zip(playerIds, newElos, elos).map(([id, newElo, elo]) => {
         const diff = newElo - elo;
         const diffStr = diff >= 0 ? `+${diff}` : diff;
         const player = find(players, { id });
         return (
           <li key={id} className="flex items-center gap-2">
-            <Avatar src={player?.avatar ?? null} name={player?.name ?? ''} />
-            <span className="mr-1">{player?.name}</span>
             {newElo && elo && <span className={diff >= 0 ? 'text-green-700' : 'text-red-700'}>{diffStr}</span>}
+            <Avatar src={player?.avatar ?? null} name={player?.name ?? ''} />
+            <span>{player?.name}</span>
           </li>
         );
       })}
@@ -50,7 +50,7 @@ export default function MatchCard({ match, players, onEndMatch, onRevertMatch, o
   return (
     <li
       className={`
-        rounded-xl border border-gray-200 p-3
+        rounded-xl border border-gray-200 p-4
         dark:border-gray-700
         ${(match.result === 'Cancelled' || match.result === 'Reverted') && 'opacity-50'}
       `}
@@ -111,8 +111,8 @@ export default function MatchCard({ match, players, onEndMatch, onRevertMatch, o
       </div>
       <div
         className={`
-          mt-2 grid grid-cols-1 gap-4 text-sm
-          md:grid-cols-2
+          mt-3 grid grid-cols-1 gap-4 text-sm
+          md:grid-cols-[1fr_auto_1fr]
         `}
       >
         <div>
@@ -137,6 +137,20 @@ export default function MatchCard({ match, players, onEndMatch, onRevertMatch, o
             </button>
           )}
         </div>
+        <div
+          className={`
+            h-px w-full bg-gray-200
+            md:hidden
+            dark:bg-gray-700
+          `}
+        />
+        <div
+          className={`
+            hidden w-px self-stretch bg-gray-200
+            md:block
+            dark:bg-gray-700
+          `}
+        />
         <div>
           <div className="mb-1 font-medium">Team B</div>
           <TeamEloList
