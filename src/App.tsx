@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useLayoutEffect } from 'react';
 import EloRank from 'elo-rank';
 import { sampleSize, mean, zipWith, sumBy, meanBy } from 'es-toolkit';
 import supabase from '@/lib/supabase.ts';
@@ -32,6 +32,13 @@ export default function App() {
     [],
   );
   const [getMatchCount, { count: matchCount }] = useSupaQuery(getMatchCountCallback);
+
+  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark');
+
+  useLayoutEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
+  }, [dark]);
 
   const [teamA, setTeamA] = useState<Player[]>([]);
   const [teamB, setTeamB] = useState<Player[]>([]);
@@ -396,6 +403,18 @@ export default function App() {
               Go Go Toolkit
             </h1>
           </div>
+          <button
+            type="button"
+            onClick={() => setDark((d) => !d)}
+            className={`
+              cursor-pointer rounded-lg border border-gray-200 bg-white p-1.5 text-base shadow-sm transition-colors
+              hover:bg-gray-100
+              dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700
+            `}
+            aria-label="Toggle dark mode"
+          >
+            {dark ? '\u2600\uFE0F' : '\uD83C\uDF19'}
+          </button>
         </header>
 
         {/* Leaderboard */}
