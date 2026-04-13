@@ -12,7 +12,7 @@ interface Props {
 
 export default function AvailablePlayers({ players, availableIds, onToggle }: Props) {
   return (
-    <Section title="Available Players" actions={<Pill>Total {availableIds.length}</Pill>}>
+    <Section title="Available Players" actions={<Pill>{availableIds.length} players</Pill>}>
       <div
         className={`
           columns-1 gap-2

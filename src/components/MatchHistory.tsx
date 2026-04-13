@@ -1,29 +1,19 @@
 import type { Player, Match } from '@/types/common.ts';
-import Pill from '@/components/Pill';
 import Section from '@/components/Section.tsx';
 import MatchCard from '@/components/MatchCard.tsx';
 
 interface Props {
   matches: Match[];
   players: Player[] | null;
-  matchCount: number | null;
   onEndMatch: (match: Match, result: 'A' | 'B') => void;
   onRevertMatch: (match: Match) => void;
   onCancelMatch: (match: Match) => void;
   onRematch: (match: Match) => void;
 }
 
-export default function MatchHistory({
-  matches,
-  players,
-  matchCount,
-  onEndMatch,
-  onRevertMatch,
-  onCancelMatch,
-  onRematch,
-}: Props) {
+export default function MatchHistory({ matches, players, onEndMatch, onRevertMatch, onCancelMatch, onRematch }: Props) {
   return (
-    <Section title="Match History" actions={<Pill>{matchCount} matches</Pill>}>
+    <Section title="Match History">
       {matches.length === 0 ? (
         <div
           className={`

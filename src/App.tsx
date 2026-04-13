@@ -21,24 +21,25 @@ export default function App() {
   const [getPlayers, { data: playerData }] = useSupaQuery(getPlayersCallback);
   const players = playerData as Player[] | null;
 
-  const getAllMatchesCallback = useCallback(
-    async () => supabase.from('match').select('*', { count: 'exact' }).order('created_at', { ascending: false }),
-    [],
-  );
-  const [getAllMatches, { data: allMatchesData, count: matchCount }] = useSupaQuery(getAllMatchesCallback);
-  const allMatches = allMatchesData as Match[] | null;
-
   const twoWeeksAgo = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 14);
     return d.toISOString();
   }, []);
 
-  const matches = useMemo(() => allMatches?.slice(0, 10) ?? null, [allMatches]);
-  const spotlightMatches = useMemo(
-    () => allMatches?.filter((m) => m.created_at >= twoWeeksAgo) ?? null,
-    [allMatches, twoWeeksAgo],
+  const getAllMatchesCallback = useCallback(
+    async () =>
+      supabase
+        .from('match')
+        .select('*', { count: 'exact' })
+        .gte('created_at', twoWeeksAgo)
+        .order('created_at', { ascending: false }),
+    [twoWeeksAgo],
   );
+  const [getAllMatches, { data: allMatchesData, count: matchCount }] = useSupaQuery(getAllMatchesCallback);
+  const allMatches = allMatchesData as Match[] | null;
+
+  const matches = useMemo(() => allMatches?.slice(0, 10) ?? null, [allMatches]);
 
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark');
 
@@ -454,14 +455,13 @@ export default function App() {
           />
 
           {/* Spotlight */}
-          {spotlightMatches && <PlayerSpotlight matches={spotlightMatches} allMatches={allMatches} players={players} />}
+          {allMatches && <PlayerSpotlight matches={allMatches} players={players} />}
 
           {/* History */}
           {matches && (
             <MatchHistory
               matches={matches}
               players={players}
-              matchCount={matchCount}
               onEndMatch={endMatch}
               onRevertMatch={revertMatch}
               onCancelMatch={cancelMatch}

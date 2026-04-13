@@ -7,7 +7,6 @@ import HeadToHead from '@/components/HeadToHead.tsx';
 
 interface Props {
   matches: Match[];
-  allMatches: Match[] | null;
   players: Player[] | null;
 }
 
@@ -185,7 +184,7 @@ function computeOilAndWater(finished: Match[], players: Player[]): StatCard | nu
   };
 }
 
-export default function PlayerSpotlight({ matches, allMatches, players }: Props) {
+export default function PlayerSpotlight({ matches, players }: Props) {
   const stats = useMemo(() => {
     if (!players || players.length === 0) return [];
     const finished = completedMatches(matches);
@@ -253,7 +252,7 @@ export default function PlayerSpotlight({ matches, allMatches, players }: Props)
         `}
       />
 
-      <HeadToHead players={players} matches={allMatches} />
+      <HeadToHead players={players} matches={matches} />
     </Section>
   );
 }
