@@ -1,4 +1,4 @@
-import type { Streak } from '@/App.tsx';
+import type { Streak } from '@/utils/streaks.ts';
 
 const DEFAULT_AVATAR = 'https://cob0e2g1ourlhlk0.public.blob.vercel-storage.com/default.jpg';
 

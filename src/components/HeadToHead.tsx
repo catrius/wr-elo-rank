@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { orderBy } from 'es-toolkit';
 import type { Player, Match } from '@/types/common.ts';
-import type { Streak } from '@/App.tsx';
+import type { Streak } from '@/utils/streaks.ts';
 import Avatar from '@/components/Avatar.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 

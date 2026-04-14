@@ -1,5 +1,5 @@
 import type { Player } from '@/types/common.ts';
-import type { Streak } from '@/App.tsx';
+import type { Streak } from '@/utils/streaks.ts';
 import { isNumber, isNaN } from 'es-toolkit/compat';
 import Pill from '@/components/Pill';
 import Section from '@/components/Section.tsx';

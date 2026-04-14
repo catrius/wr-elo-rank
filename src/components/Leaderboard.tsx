@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { orderBy } from 'es-toolkit';
 import { Link } from 'react-router-dom';
 import type { Player } from '@/types/common.ts';
-import type { Streak } from '@/App.tsx';
+import type { Streak } from '@/utils/streaks.ts';
 import Section from '@/components/Section.tsx';
 import Avatar from '@/components/Avatar.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';

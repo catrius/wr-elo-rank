@@ -1,5 +1,5 @@
 import type { Player } from '@/types/common.ts';
-import type { Streak } from '@/App.tsx';
+import type { Streak } from '@/utils/streaks.ts';
 import Pill from '@/components/Pill';
 import Avatar from '@/components/Avatar.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';

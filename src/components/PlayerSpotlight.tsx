@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Player, Match } from '@/types/common.ts';
-import type { Streak } from '@/App.tsx';
+import type { Streak } from '@/utils/streaks.ts';
 import Section from '@/components/Section.tsx';
 import Pill from '@/components/Pill.tsx';
 import Avatar from '@/components/Avatar.tsx';
