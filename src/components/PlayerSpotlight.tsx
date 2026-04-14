@@ -1,17 +1,10 @@
 import { useMemo } from 'react';
 import type { Player, Match } from '@/types/common.ts';
-import type { Streak } from '@/utils/streaks.ts';
 import Section from '@/components/Section.tsx';
 import Pill from '@/components/Pill.tsx';
 import Avatar from '@/components/Avatar.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
-
-interface Props {
-  matches: Match[];
-  players: Player[] | null;
-  streaks: Record<number, Streak>;
-  seasonName: string | null;
-}
+import { useGameDataContext } from '@/contexts/GameDataContext.tsx';
 
 interface StatCard {
   label: string;
@@ -187,10 +180,12 @@ function computeOilAndWater(finished: Match[], players: Player[]): StatCard | nu
   };
 }
 
-export default function PlayerSpotlight({ matches, players, streaks, seasonName }: Props) {
+export default function PlayerSpotlight() {
+  const { allMatches: matches, players, streaks, currentSeason } = useGameDataContext();
+  const seasonName = currentSeason?.name ?? null;
   const { displayName } = useDisplayName();
   const stats = useMemo(() => {
-    if (!players || players.length === 0) return [];
+    if (!matches || !players || players.length === 0) return [];
     const finished = completedMatches(matches);
     if (finished.length === 0) return [];
 
@@ -202,7 +197,7 @@ export default function PlayerSpotlight({ matches, players, streaks, seasonName 
     ].filter((card): card is StatCard => card !== null);
   }, [matches, players]);
 
-  if (stats.length === 0) return null;
+  if (!matches || stats.length === 0) return null;
 
   return (
     <Section

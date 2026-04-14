@@ -1,47 +1,30 @@
-import type { Player } from '@/types/common.ts';
-import type { Streak } from '@/utils/streaks.ts';
+import { useCallback } from 'react';
 import { isNumber, isNaN } from 'es-toolkit/compat';
 import Pill from '@/components/Pill';
 import Section from '@/components/Section.tsx';
 import TeamPanel from '@/components/TeamPanel.tsx';
+import { useGameDataContext } from '@/contexts/GameDataContext.tsx';
+import { useTeamsContext } from '@/contexts/TeamsContext.tsx';
 
-interface Props {
-  teamA: Player[];
-  teamB: Player[];
-  averageTeamAElos: number;
-  averageTeamBElos: number;
-  eloDiff: number;
-  onDragStart: (player: Player, from: 'A' | 'B') => (e: any) => void;
-  onDragOver: (e: any) => void;
-  onDropToA: (e: any) => void;
-  onDropToB: (e: any) => void;
-  onShuffle: () => void;
-  onBest: () => void;
-  onRematch: () => void;
-  onStart: () => void;
-  disabledSuggest: boolean;
-  disabledStart: boolean;
-  streaks: Record<number, Streak>;
-}
+export default function NewMatch() {
+  const { streaks, refresh } = useGameDataContext();
+  const {
+    teamA,
+    teamB,
+    averageTeamAElos,
+    averageTeamBElos,
+    eloDiff,
+    handleDragStart,
+    handleDragOverPanel,
+    handleDropTo,
+    suggestTeams,
+    lastMatch,
+    createMatch,
+    disabledSuggest,
+    disabledStart,
+  } = useTeamsContext();
 
-export default function NewMatch({
-  teamA,
-  teamB,
-  averageTeamAElos,
-  averageTeamBElos,
-  eloDiff,
-  onDragStart,
-  onDragOver,
-  onDropToA,
-  onDropToB,
-  onShuffle,
-  onBest,
-  onRematch,
-  onStart,
-  disabledSuggest,
-  disabledStart,
-  streaks,
-}: Props) {
+  const handleStart = useCallback(() => createMatch().then(() => refresh()), [createMatch, refresh]);
   return (
     <Section title="New Match" actions={isNumber(eloDiff) && !isNaN(eloDiff) ? <Pill>{`Diff ${eloDiff}`}</Pill> : null}>
       <div className="mb-4 text-sm">
@@ -58,9 +41,9 @@ export default function NewMatch({
             label="Team A"
             team={teamA}
             averageElo={averageTeamAElos}
-            onDragStart={onDragStart}
-            onDragOver={onDragOver}
-            onDrop={onDropToA}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOverPanel}
+            onDrop={handleDropTo('A')}
             side="A"
             streaks={streaks}
           />
@@ -68,9 +51,9 @@ export default function NewMatch({
             label="Team B"
             team={teamB}
             averageElo={averageTeamBElos}
-            onDragStart={onDragStart}
-            onDragOver={onDragOver}
-            onDrop={onDropToB}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOverPanel}
+            onDrop={handleDropTo('B')}
             side="B"
             streaks={streaks}
           />
@@ -80,7 +63,7 @@ export default function NewMatch({
           <div className="flex place-content-end gap-3">
             <button
               type="button"
-              onClick={onShuffle}
+              onClick={() => suggestTeams(20)}
               className={`
                 cursor-pointer rounded-xl border border-gray-200 px-4 py-2
                 hover:bg-gray-50
@@ -93,7 +76,7 @@ export default function NewMatch({
             </button>
             <button
               type="button"
-              onClick={onBest}
+              onClick={() => suggestTeams(0)}
               className={`
                 cursor-pointer rounded-xl border border-gray-200 px-4 py-2
                 hover:bg-gray-50
@@ -106,7 +89,7 @@ export default function NewMatch({
             </button>
             <button
               type="button"
-              onClick={onRematch}
+              onClick={() => lastMatch()}
               className={`
                 cursor-pointer rounded-xl border border-gray-200 px-4 py-2
                 hover:bg-gray-50
@@ -125,7 +108,7 @@ export default function NewMatch({
                 hover:bg-indigo-700
                 disabled:cursor-not-allowed disabled:opacity-50
               `}
-              onClick={onStart}
+              onClick={handleStart}
               disabled={disabledStart}
             >
               Start

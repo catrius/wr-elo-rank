@@ -7,32 +7,54 @@ import HeadToHead from '@/components/HeadToHead.tsx';
 import Pairings from '@/components/Pairings.tsx';
 import Section from '@/components/Section.tsx';
 import SeasonNav from '@/components/SeasonNav.tsx';
-import useGameData from '@/hooks/useGameData.ts';
-import useTeams from '@/hooks/useTeams.ts';
-import useMatchActions from '@/hooks/useMatchActions.ts';
 import useDarkMode from '@/hooks/useDarkMode.ts';
+import { GameDataProvider, useGameDataContext } from '@/contexts/GameDataContext.tsx';
+import { TeamsProvider } from '@/contexts/TeamsContext.tsx';
+import { MatchActionsProvider } from '@/contexts/MatchActionsContext.tsx';
+
+function AppContent() {
+  const { allMatches, matches, players, seasons, streaks } = useGameDataContext();
+
+  return (
+    <>
+      <SeasonNav seasons={seasons ?? []} />
+
+      {/* Leaderboard */}
+      <Leaderboard players={players} streaks={streaks} />
+
+      {/* Input form */}
+      <div
+        className={`
+          mt-6 grid gap-6
+          md:mt-10 md:grid-cols-2
+        `}
+      >
+        <AvailablePlayers />
+
+        <NewMatch />
+
+        {/* Spotlight + Head-to-Head */}
+        {allMatches && (
+          <div className="flex flex-col gap-6">
+            <PlayerSpotlight />
+            <Section title="Head-to-Head">
+              <HeadToHead />
+            </Section>
+            <Section title="Pairings">
+              <Pairings />
+            </Section>
+          </div>
+        )}
+
+        {/* History */}
+        {matches && <MatchHistory />}
+      </div>
+    </>
+  );
+}
 
 export default function App() {
-  const { players, allMatches, matches, pairings, seasons, currentSeason, streaks, refresh } = useGameData();
   const { dark, toggleDark } = useDarkMode();
-  const {
-    teamA,
-    teamB,
-    availableIds,
-    averageTeamAElos,
-    averageTeamBElos,
-    eloDiff,
-    disabledStart,
-    disabledSuggest,
-    handleDragStart,
-    handleDragOverPanel,
-    handleDropTo,
-    toggleAvailable,
-    suggestTeams,
-    lastMatch,
-    createMatch,
-  } = useTeams(players, matches, pairings);
-  const { endMatch, revertMatch, cancelMatch } = useMatchActions(players, refresh);
 
   return (
     <div
@@ -77,74 +99,13 @@ export default function App() {
           </button>
         </header>
 
-        <SeasonNav seasons={seasons ?? []} />
-
-        {/* Leaderboard */}
-        <Leaderboard players={players} streaks={streaks} />
-
-        {/* Input form */}
-        <div
-          className={`
-            mt-6 grid gap-6
-            md:mt-10 md:grid-cols-2
-          `}
-        >
-          <AvailablePlayers
-            players={players}
-            availableIds={availableIds}
-            onToggle={toggleAvailable}
-            streaks={streaks}
-          />
-
-          <NewMatch
-            teamA={teamA}
-            teamB={teamB}
-            averageTeamAElos={averageTeamAElos}
-            averageTeamBElos={averageTeamBElos}
-            eloDiff={eloDiff}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOverPanel}
-            onDropToA={handleDropTo('A')}
-            onDropToB={handleDropTo('B')}
-            onShuffle={() => suggestTeams(20)}
-            onBest={() => suggestTeams(0)}
-            onRematch={() => lastMatch()}
-            onStart={() => createMatch().then(() => refresh())}
-            disabledSuggest={disabledSuggest}
-            disabledStart={disabledStart}
-            streaks={streaks}
-          />
-
-          {/* Spotlight + Head-to-Head */}
-          {allMatches && (
-            <div className="flex flex-col gap-6">
-              <PlayerSpotlight
-                matches={allMatches}
-                players={players}
-                streaks={streaks}
-                seasonName={currentSeason?.name ?? null}
-              />
-              <Section title="Head-to-Head">
-                <HeadToHead players={players} matches={allMatches} streaks={streaks} />
-              </Section>
-              <Section title="Pairings">
-                <Pairings players={players} pairings={pairings} onRefresh={refresh} />
-              </Section>
-            </div>
-          )}
-
-          {/* History */}
-          {matches && (
-            <MatchHistory
-              matches={matches}
-              players={players}
-              onEndMatch={endMatch}
-              onRevertMatch={revertMatch}
-              onCancelMatch={cancelMatch}
-              onRematch={lastMatch}
-            />
-          )}
-        </div>
+        <GameDataProvider>
+          <TeamsProvider>
+            <MatchActionsProvider>
+              <AppContent />
+            </MatchActionsProvider>
+          </TeamsProvider>
+        </GameDataProvider>
       </div>
     </div>
   );

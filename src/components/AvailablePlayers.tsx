@@ -1,19 +1,14 @@
 import { orderBy } from 'es-toolkit';
-import type { Player } from '@/types/common.ts';
-import type { Streak } from '@/utils/streaks.ts';
 import Pill from '@/components/Pill';
 import Section from '@/components/Section.tsx';
 import Avatar from '@/components/Avatar.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
+import { useGameDataContext } from '@/contexts/GameDataContext.tsx';
+import { useTeamsContext } from '@/contexts/TeamsContext.tsx';
 
-interface Props {
-  players: Player[] | null;
-  availableIds: number[];
-  onToggle: (id: number) => void;
-  streaks: Record<number, Streak>;
-}
-
-export default function AvailablePlayers({ players, availableIds, onToggle, streaks }: Props) {
+export default function AvailablePlayers() {
+  const { players, streaks } = useGameDataContext();
+  const { availableIds, toggleAvailable } = useTeamsContext();
   const { displayName } = useDisplayName();
 
   return (
@@ -39,7 +34,7 @@ export default function AvailablePlayers({ players, availableIds, onToggle, stre
                 type="checkbox"
                 className="h-4 w-4"
                 checked={availableIds.includes(player.id)}
-                onChange={() => onToggle(player.id)}
+                onChange={() => toggleAvailable(player.id)}
               />
               <Avatar src={player.avatar} name={displayName(player)} streak={streaks[player.id]} />
               <span className="flex-1">{displayName(player)}</span>

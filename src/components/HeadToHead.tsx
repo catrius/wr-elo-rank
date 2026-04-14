@@ -1,15 +1,9 @@
 import { useState, useMemo } from 'react';
 import { orderBy } from 'es-toolkit';
-import type { Player, Match } from '@/types/common.ts';
-import type { Streak } from '@/utils/streaks.ts';
+import type { Player } from '@/types/common.ts';
 import Avatar from '@/components/Avatar.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
-
-interface Props {
-  players: Player[] | null;
-  matches: Match[] | null;
-  streaks: Record<number, Streak>;
-}
+import { useGameDataContext } from '@/contexts/GameDataContext.tsx';
 
 function PlayerSelect({
   players,
@@ -44,7 +38,8 @@ function PlayerSelect({
   );
 }
 
-export default function HeadToHead({ players, matches: allMatches, streaks }: Props) {
+export default function HeadToHead() {
+  const { players, allMatches, streaks } = useGameDataContext();
   const { displayName } = useDisplayName();
   const [playerAId, setPlayerAId] = useState<number | null>(null);
   const [playerBId, setPlayerBId] = useState<number | null>(null);

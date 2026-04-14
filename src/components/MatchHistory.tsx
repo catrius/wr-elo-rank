@@ -1,20 +1,16 @@
-import type { Player, Match } from '@/types/common.ts';
 import Section from '@/components/Section.tsx';
 import MatchCard from '@/components/MatchCard.tsx';
+import { useGameDataContext } from '@/contexts/GameDataContext.tsx';
+import { useTeamsContext } from '@/contexts/TeamsContext.tsx';
+import { useMatchActionsContext } from '@/contexts/MatchActionsContext.tsx';
 
-interface Props {
-  matches: Match[];
-  players: Player[] | null;
-  onEndMatch: (match: Match, result: 'A' | 'B') => void;
-  onRevertMatch: (match: Match) => void;
-  onCancelMatch: (match: Match) => void;
-  onRematch: (match: Match) => void;
-}
-
-export default function MatchHistory({ matches, players, onEndMatch, onRevertMatch, onCancelMatch, onRematch }: Props) {
+export default function MatchHistory() {
+  const { matches, players } = useGameDataContext();
+  const { lastMatch } = useTeamsContext();
+  const { endMatch, revertMatch, cancelMatch } = useMatchActionsContext();
   return (
     <Section title="Match History">
-      {matches.length === 0 ? (
+      {!matches || matches.length === 0 ? (
         <div
           className={`
             text-sm text-gray-600
@@ -30,10 +26,10 @@ export default function MatchHistory({ matches, players, onEndMatch, onRevertMat
               key={match.id}
               match={match}
               players={players}
-              onEndMatch={onEndMatch}
-              onRevertMatch={onRevertMatch}
-              onCancelMatch={onCancelMatch}
-              onRematch={onRematch}
+              onEndMatch={endMatch}
+              onRevertMatch={revertMatch}
+              onCancelMatch={cancelMatch}
+              onRematch={lastMatch}
             />
           ))}
         </ul>

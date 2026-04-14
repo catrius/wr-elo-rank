@@ -4,12 +4,7 @@ import type { Player, Pairing } from '@/types/common.ts';
 import supabase from '@/lib/supabase.ts';
 import Avatar from '@/components/Avatar.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
-
-interface Props {
-  players: Player[] | null;
-  pairings: Pairing[] | null;
-  onRefresh: () => void;
-}
+import { useGameDataContext } from '@/contexts/GameDataContext.tsx';
 
 function PlayerSelect({
   players,
@@ -48,7 +43,8 @@ function PlayerSelect({
   );
 }
 
-export default function Pairings({ players, pairings, onRefresh }: Props) {
+export default function Pairings() {
+  const { players, pairings, refresh } = useGameDataContext();
   const { displayName } = useDisplayName();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [player1, setPlayer1] = useState<number | null>(null);
@@ -99,15 +95,15 @@ export default function Pairings({ players, pairings, onRefresh }: Props) {
     }
 
     cancel();
-    onRefresh();
-  }, [player1, player2, editingId, cancel, onRefresh]);
+    refresh();
+  }, [player1, player2, editingId, cancel, refresh]);
 
   const deletePairing = useCallback(
     async (id: number) => {
       await supabase.from('pairing').delete().eq('id', id);
-      onRefresh();
+      refresh();
     },
-    [onRefresh],
+    [refresh],
   );
 
   const isEditing = (id: number) => editingId === id;
