@@ -69,19 +69,11 @@ export default function App() {
   const [getPlayers, { data: playerData }] = useSupaQuery(getPlayersCallback);
   const players = playerData as Player[] | null;
 
-  const twoWeeksAgo = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 14);
-    return d.toISOString();
-  }, []);
-
   const getAllMatchesCallback = useCallback(
-    async () =>
-      supabase.from('match').select('*').gte('created_at', twoWeeksAgo).order('created_at', { ascending: false }),
-    [twoWeeksAgo],
+    async () => supabase.from('match').select('*').order('created_at', { ascending: false }),
+    [],
   );
   const [getAllMatches, { data: allMatchesData }] = useSupaQuery(getAllMatchesCallback);
-  const allMatches = allMatchesData as Match[] | null;
 
   const getPairingsCallback = useCallback(
     async () => supabase.from('pairing').select().order('created_at', { ascending: true }),
@@ -91,11 +83,19 @@ export default function App() {
   const pairings = pairingsData as Pairing[] | null;
 
   const getSeasonsCallback = useCallback(
-    async () => supabase.from('season').select('id, name, end').order('created_at', { ascending: false }),
+    async () => supabase.from('season').select('id, name, end, start').order('created_at', { ascending: false }),
     [],
   );
   const [getSeasons, { data: seasonsData }] = useSupaQuery(getSeasonsCallback);
-  const seasons = seasonsData as Pick<Season, 'id' | 'name' | 'end'>[] | null;
+  const seasons = seasonsData as Pick<Season, 'id' | 'name' | 'end' | 'start'>[] | null;
+
+  const currentSeason = useMemo(() => seasons?.find((s) => !s.end) ?? null, [seasons]);
+
+  const allMatches = useMemo(() => {
+    const raw = allMatchesData as Match[] | null;
+    if (!raw || !currentSeason?.start) return raw;
+    return raw.filter((m) => m.created_at >= currentSeason.start!);
+  }, [allMatchesData, currentSeason]);
 
   const matches = useMemo(() => allMatches?.slice(0, 10) ?? null, [allMatches]);
 
@@ -534,7 +534,12 @@ export default function App() {
           {/* Spotlight + Head-to-Head */}
           {allMatches && (
             <div className="flex flex-col gap-6">
-              <PlayerSpotlight matches={allMatches} players={players} streaks={streaks} />
+              <PlayerSpotlight
+                matches={allMatches}
+                players={players}
+                streaks={streaks}
+                seasonName={currentSeason?.name ?? null}
+              />
               <Section title="Head-to-Head">
                 <HeadToHead players={players} matches={allMatches} streaks={streaks} />
               </Section>

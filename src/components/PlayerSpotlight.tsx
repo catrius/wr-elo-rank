@@ -9,6 +9,7 @@ interface Props {
   matches: Match[];
   players: Player[] | null;
   streaks: Record<number, Streak>;
+  seasonName: string | null;
 }
 
 interface StatCard {
@@ -185,7 +186,7 @@ function computeOilAndWater(finished: Match[], players: Player[]): StatCard | nu
   };
 }
 
-export default function PlayerSpotlight({ matches, players, streaks }: Props) {
+export default function PlayerSpotlight({ matches, players, streaks, seasonName }: Props) {
   const stats = useMemo(() => {
     if (!players || players.length === 0) return [];
     const finished = completedMatches(matches);
@@ -202,7 +203,14 @@ export default function PlayerSpotlight({ matches, players, streaks }: Props) {
   if (stats.length === 0) return null;
 
   return (
-    <Section title="Player Spotlight" actions={<Pill>Last 2 weeks · {matches.length} matches</Pill>}>
+    <Section
+      title="Player Spotlight"
+      actions={
+        <Pill>
+          {seasonName ?? 'Current Season'} · {matches.length} matches
+        </Pill>
+      }
+    >
       <div className="grid grid-cols-2 gap-3">
         {stats.map((stat) => (
           <div

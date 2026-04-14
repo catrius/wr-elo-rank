@@ -5,7 +5,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianG
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import supabase from '@/lib/supabase.ts';
-import type { Player, Match } from '@/types/common.ts';
+import type { Player, Match, Season } from '@/types/common.ts';
 import Avatar from '@/components/Avatar.tsx';
 
 dayjs.extend(utc);
@@ -18,7 +18,8 @@ export default function PlayerPage() {
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [chartLimit, setChartLimit] = useState<number | 'all'>(20);
+  const [seasons, setSeasons] = useState<Pick<Season, 'id' | 'name' | 'start' | 'end'>[]>([]);
+  const [selectedSeasonId, setSelectedSeasonId] = useState<number | 'all'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchPlayer = useCallback(async () => {
@@ -37,6 +38,19 @@ export default function PlayerPage() {
     if (data) setMatches(data as Match[]);
   }, [playerId]);
 
+  const fetchSeasons = useCallback(async () => {
+    const { data } = await supabase
+      .from('season')
+      .select('id, name, start, end')
+      .order('created_at', { ascending: false });
+    if (data) {
+      const typed = data as Pick<Season, 'id' | 'name' | 'start' | 'end'>[];
+      setSeasons(typed);
+      const current = typed.find((s) => !s.end);
+      if (current) setSelectedSeasonId(current.id);
+    }
+  }, []);
+
   const allTimeStats = useMemo(() => {
     const completed = matches.filter((m) => m.result === 'A' || m.result === 'B');
     const wins = completed.filter((m) => {
@@ -47,37 +61,41 @@ export default function PlayerPage() {
     return { wins, losses: total - wins, total, winRate: total ? ((wins / total) * 100).toFixed(1) : '0' };
   }, [matches, playerId]);
 
+  const selectedSeason = useMemo(
+    () => (selectedSeasonId === 'all' ? null : (seasons.find((s) => s.id === selectedSeasonId) ?? null)),
+    [seasons, selectedSeasonId],
+  );
+
   const eloHistory = useMemo(() => {
-    const completed = matches
+    let completed = matches
       .filter((m) => (m.result === 'A' || m.result === 'B') && m.team_a_new_elos && m.team_b_new_elos)
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-    const points = completed.map((m) => {
+    if (selectedSeason) {
+      completed = completed.filter(
+        (m) =>
+          (!selectedSeason.start || m.created_at >= selectedSeason.start) &&
+          (!selectedSeason.end || m.created_at <= selectedSeason.end),
+      );
+    }
+
+    return completed.map((m, i) => {
       const onTeamA = m.team_a_players.includes(playerId);
       const players = onTeamA ? m.team_a_players : m.team_b_players;
       const newElos = onTeamA ? m.team_a_new_elos! : m.team_b_new_elos!;
       const idx = players.indexOf(playerId);
       const date = dayjs.utc(m.created_at).local().format('DD/MM');
-      return { elo: newElos[idx], date };
+      return { elo: newElos[idx], date, tick: i };
     });
+  }, [matches, playerId, selectedSeason]);
 
-    const sliced = chartLimit === 'all' ? points : points.slice(-chartLimit);
-
-    // Only show a date label when it differs from the previous point
-    let prev = '';
-    return sliced.map((p) => {
-      const label = p.date === prev ? '' : p.date;
-      prev = p.date;
-      return { ...p, label };
-    });
-  }, [matches, playerId, chartLimit]);
-
-  const verticalDates = chartLimit === 'all' || chartLimit === 100;
+  const verticalDates = eloHistory.length > 50;
 
   useEffect(() => {
     fetchPlayer();
     fetchMatches();
-  }, [fetchPlayer, fetchMatches]);
+    fetchSeasons();
+  }, [fetchPlayer, fetchMatches, fetchSeasons]);
 
   const handleAvatarChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -387,20 +405,22 @@ export default function PlayerPage() {
             Elo History
           </h2>
           <select
-            value={chartLimit}
+            value={selectedSeasonId}
             onChange={(e) => {
               const v = e.target.value;
-              setChartLimit(v === 'all' ? 'all' : Number(v));
+              setSelectedSeasonId(v === 'all' ? 'all' : Number(v));
             }}
             className={`
               rounded border border-gray-300 bg-white px-3 py-1.5 text-sm
               dark:border-gray-600 dark:bg-gray-800
             `}
           >
-            <option value={20}>Last 20</option>
-            <option value={50}>Last 50</option>
-            <option value={100}>Last 100</option>
-            <option value="all">All matches</option>
+            {seasons.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name ?? `Season ${s.id}`}
+              </option>
+            ))}
+            <option value="all">All seasons</option>
           </select>
         </div>
         <div
@@ -414,9 +434,13 @@ export default function PlayerPage() {
               <LineChart data={eloHistory}>
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                 <XAxis
-                  dataKey="label"
+                  dataKey="tick"
                   tick={{ fontSize: 11 }}
                   interval={0}
+                  tickFormatter={(value) => {
+                    if (value > 0 && eloHistory[value - 1]?.date === eloHistory[value]?.date) return '';
+                    return eloHistory[value]?.date ?? '';
+                  }}
                   angle={verticalDates ? -90 : 0}
                   textAnchor={verticalDates ? 'end' : 'middle'}
                   height={verticalDates ? 60 : 30}
