@@ -1,10 +1,11 @@
 import { useEffect, useCallback, useState, useLayoutEffect, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import supabase from '@/lib/supabase.ts';
 import useSupaQuery from '@/hooks/useSupaQuery.ts';
 import type { Player, Season, Match } from '@/types/common.ts';
 import Leaderboard from '@/components/Leaderboard.tsx';
 import SeasonSpotlight from '@/components/SeasonSpotlight.tsx';
+import SeasonNav from '@/components/SeasonNav.tsx';
 
 export default function SeasonPage() {
   const { id } = useParams<{ id: string }>();
@@ -98,26 +99,14 @@ export default function SeasonPage() {
             md:mb-10
           `}
         >
-          <div className="flex items-center gap-4">
-            <Link
-              to="/"
-              className={`
-                text-sm text-blue-600
-                hover:underline
-                dark:text-blue-400
-              `}
-            >
-              &larr; Back
-            </Link>
-            <h1
-              className={`
-                text-2xl font-bold tracking-tight
-                md:text-3xl
-              `}
-            >
-              {season?.name}
-            </h1>
-          </div>
+          <h1
+            className={`
+              text-2xl font-bold tracking-tight
+              md:text-3xl
+            `}
+          >
+            {season?.name}
+          </h1>
           <button
             type="button"
             onClick={() => setDark((d) => !d)}
@@ -132,9 +121,11 @@ export default function SeasonPage() {
           </button>
         </header>
 
+        <SeasonNav seasons={seasons ?? []} currentId={seasonId} />
+
         <Leaderboard players={players} streaks={{}} linkToPlayer={false} />
 
-        {players && <SeasonSpotlight players={players} matches={matches} prevPlayers={prevPlayers} />}
+        <SeasonSpotlight players={players ?? []} matches={matches} prevPlayers={prevPlayers} />
       </div>
     </div>
   );

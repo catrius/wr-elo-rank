@@ -11,9 +11,9 @@ import NewMatch from '@/components/NewMatch.tsx';
 import MatchHistory from '@/components/MatchHistory.tsx';
 import PlayerSpotlight from '@/components/PlayerSpotlight.tsx';
 import HeadToHead from '@/components/HeadToHead.tsx';
-import { Link } from 'react-router-dom';
 import Pairings from '@/components/Pairings.tsx';
 import Section from '@/components/Section.tsx';
+import SeasonNav from '@/components/SeasonNav.tsx';
 
 const eloRank = new EloRank(15);
 
@@ -91,11 +91,11 @@ export default function App() {
   const pairings = pairingsData as Pairing[] | null;
 
   const getSeasonsCallback = useCallback(
-    async () => supabase.from('season').select('id, name').order('created_at', { ascending: false }),
+    async () => supabase.from('season').select('id, name, end').order('created_at', { ascending: false }),
     [],
   );
   const [getSeasons, { data: seasonsData }] = useSupaQuery(getSeasonsCallback);
-  const seasons = seasonsData as Pick<Season, 'id' | 'name'>[] | null;
+  const seasons = seasonsData as Pick<Season, 'id' | 'name' | 'end'>[] | null;
 
   const matches = useMemo(() => allMatches?.slice(0, 10) ?? null, [allMatches]);
 
@@ -493,23 +493,7 @@ export default function App() {
           </button>
         </header>
 
-        {seasons && seasons.length > 0 && (
-          <div className="mb-6 flex flex-wrap gap-2">
-            {[...seasons].reverse().map((s) => (
-              <Link
-                key={s.id}
-                to={`/season/${s.id}`}
-                className={`
-                  rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium shadow-sm transition-colors
-                  hover:bg-gray-100
-                  dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700
-                `}
-              >
-                {s.name ?? `Season ${s.id}`}
-              </Link>
-            ))}
-          </div>
-        )}
+        <SeasonNav seasons={seasons ?? []} />
 
         {/* Leaderboard */}
         <Leaderboard players={players} streaks={streaks} />
