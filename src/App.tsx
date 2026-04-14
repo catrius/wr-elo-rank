@@ -3,7 +3,7 @@ import EloRank from 'elo-rank';
 import { sampleSize, mean, zipWith, sumBy, meanBy } from 'es-toolkit';
 import supabase from '@/lib/supabase.ts';
 import useSupaQuery from '@/hooks/useSupaQuery.ts';
-import type { Player, Match, Pairing } from '@/types/common.ts';
+import type { Player, Match, Pairing, Season } from '@/types/common.ts';
 import { find, some } from 'es-toolkit/compat';
 import Leaderboard from '@/components/Leaderboard.tsx';
 import AvailablePlayers from '@/components/AvailablePlayers.tsx';
@@ -11,6 +11,7 @@ import NewMatch from '@/components/NewMatch.tsx';
 import MatchHistory from '@/components/MatchHistory.tsx';
 import PlayerSpotlight from '@/components/PlayerSpotlight.tsx';
 import HeadToHead from '@/components/HeadToHead.tsx';
+import { Link } from 'react-router-dom';
 import Pairings from '@/components/Pairings.tsx';
 import Section from '@/components/Section.tsx';
 
@@ -88,6 +89,13 @@ export default function App() {
   );
   const [getPairings, { data: pairingsData }] = useSupaQuery(getPairingsCallback);
   const pairings = pairingsData as Pairing[] | null;
+
+  const getSeasonsCallback = useCallback(
+    async () => supabase.from('season').select('id, name').order('created_at', { ascending: false }),
+    [],
+  );
+  const [getSeasons, { data: seasonsData }] = useSupaQuery(getSeasonsCallback);
+  const seasons = seasonsData as Pick<Season, 'id' | 'name'>[] | null;
 
   const matches = useMemo(() => allMatches?.slice(0, 10) ?? null, [allMatches]);
 
@@ -185,7 +193,8 @@ export default function App() {
     getPlayers();
     getAllMatches();
     getPairings();
-  }, [getAllMatches, getPairings, getPlayers]);
+    getSeasons();
+  }, [getAllMatches, getPairings, getPlayers, getSeasons]);
 
   const cancelMatch = useCallback(
     async (match: Match) => {
@@ -483,6 +492,24 @@ export default function App() {
             {dark ? '\u2600\uFE0F' : '\uD83C\uDF19'}
           </button>
         </header>
+
+        {seasons && seasons.length > 0 && (
+          <div className="mb-6 flex flex-wrap gap-2">
+            {[...seasons].reverse().map((s) => (
+              <Link
+                key={s.id}
+                to={`/season/${s.id}`}
+                className={`
+                  rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium shadow-sm transition-colors
+                  hover:bg-gray-100
+                  dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700
+                `}
+              >
+                {s.name ?? `Season ${s.id}`}
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* Leaderboard */}
         <Leaderboard players={players} streaks={streaks} />

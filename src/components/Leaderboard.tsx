@@ -16,9 +16,11 @@ function SortIndicator({ sortKey, current }: { sortKey: SortKey; current: { key:
 export default function Leaderboard({
   players,
   streaks,
+  linkToPlayer = true,
 }: {
   players: Player[] | null;
   streaks: Record<number, Streak>;
+  linkToPlayer?: boolean;
 }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({
     key: 'elo',
@@ -111,17 +113,24 @@ export default function Leaderboard({
               >
                 <td className="px-3 py-2">{i + 1}</td>
                 <td className="min-w-40 px-3 py-2">
-                  <Link
-                    to={`/players/${row.id}`}
-                    className={`
-                      inline-flex items-center gap-2 text-indigo-600
-                      hover:underline
-                      dark:text-indigo-400
-                    `}
-                  >
-                    <Avatar src={row.avatar} name={row.name} streak={streaks[row.id]} />
-                    {row.name}
-                  </Link>
+                  {linkToPlayer ? (
+                    <Link
+                      to={`/players/${row.id}`}
+                      className={`
+                        inline-flex items-center gap-2 text-indigo-600
+                        hover:underline
+                        dark:text-indigo-400
+                      `}
+                    >
+                      <Avatar src={row.avatar} name={row.name} streak={streaks[row.id]} />
+                      {row.name}
+                    </Link>
+                  ) : (
+                    <span className="inline-flex items-center gap-2">
+                      <Avatar src={row.avatar} name={row.name} streak={streaks[row.id]} />
+                      {row.name}
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-right">{row.elo}</td>
                 <td className="px-3 py-2 text-right">{row.win}</td>
