@@ -3,7 +3,7 @@ import EloRank from 'elo-rank';
 import { sampleSize, mean, zipWith, sumBy, meanBy } from 'es-toolkit';
 import supabase from '@/lib/supabase.ts';
 import useSupaQuery from '@/hooks/useSupaQuery.ts';
-import type { Player, Match } from '@/types/common.ts';
+import type { Player, Match, Pairing } from '@/types/common.ts';
 import { find, some } from 'es-toolkit/compat';
 import Leaderboard from '@/components/Leaderboard.tsx';
 import AvailablePlayers from '@/components/AvailablePlayers.tsx';
@@ -11,6 +11,7 @@ import NewMatch from '@/components/NewMatch.tsx';
 import MatchHistory from '@/components/MatchHistory.tsx';
 import PlayerSpotlight from '@/components/PlayerSpotlight.tsx';
 import HeadToHead from '@/components/HeadToHead.tsx';
+import Pairings from '@/components/Pairings.tsx';
 import Section from '@/components/Section.tsx';
 
 const eloRank = new EloRank(15);
@@ -80,6 +81,13 @@ export default function App() {
   );
   const [getAllMatches, { data: allMatchesData }] = useSupaQuery(getAllMatchesCallback);
   const allMatches = allMatchesData as Match[] | null;
+
+  const getPairingsCallback = useCallback(
+    async () => supabase.from('pairing').select().order('created_at', { ascending: true }),
+    [],
+  );
+  const [getPairings, { data: pairingsData }] = useSupaQuery(getPairingsCallback);
+  const pairings = pairingsData as Pairing[] | null;
 
   const matches = useMemo(() => allMatches?.slice(0, 10) ?? null, [allMatches]);
 
@@ -176,7 +184,8 @@ export default function App() {
   const refresh = useCallback(() => {
     getPlayers();
     getAllMatches();
-  }, [getAllMatches, getPlayers]);
+    getPairings();
+  }, [getAllMatches, getPairings, getPlayers]);
 
   const cancelMatch = useCallback(
     async (match: Match) => {
@@ -355,10 +364,15 @@ export default function App() {
       const sizeA = Math.ceil(total / 2);
       const target = (totalElo * sizeA) / total;
 
-      // locate the indices of the special players inside the current candidates pool
-      const i3 = candidates.findIndex((p) => p.id === 3); // Khoai
-      const i7 = candidates.findIndex((p) => p.id === 7); // Mam
-      const haveKhoaiMamPair = i3 !== -1 && i7 !== -1;
+      // Build active pairing constraints from candidates
+      const activePairs: [number, number][] = (pairings ?? [])
+        .filter((pairing) => pairing.player1 && pairing.player2)
+        .map((pairing) => {
+          const idx1 = candidates.findIndex((p) => p.id === pairing.player1);
+          const idx2 = candidates.findIndex((p) => p.id === pairing.player2);
+          return [idx1, idx2] as [number, number];
+        })
+        .filter(([idx1, idx2]) => idx1 !== -1 && idx2 !== -1);
 
       let bestDiff = Infinity;
       let bestChoiceIndexes: number[] = [];
@@ -367,11 +381,13 @@ export default function App() {
       // DFS to choose exactly `sizeA` players whose Elo sum is closest to `target`
       const dfs = (index: number, chosenIdxs: number[], chosenSum: number) => {
         if (chosenIdxs.length === sizeA) {
-          if (haveKhoaiMamPair) {
-            const aHas3 = chosenIdxs.includes(i3);
-            const aHas7 = chosenIdxs.includes(i7);
-            if (aHas3 !== aHas7) return; // one is in A and the other is in B -> invalid split
-          }
+          // Enforce pairing constraints: paired players must be on the same team
+          const pairViolation = activePairs.some(([idx1, idx2]) => {
+            const aHas1 = chosenIdxs.includes(idx1);
+            const aHas2 = chosenIdxs.includes(idx2);
+            return aHas1 !== aHas2; // split pair -> invalid
+          });
+          if (pairViolation) return;
 
           const diff = Math.abs(chosenSum - target);
 
@@ -414,7 +430,7 @@ export default function App() {
       setTeamA(teamAPlayers);
       setTeamB(teamBPlayers);
     },
-    [available, players],
+    [available, pairings, players],
   );
 
   useEffect(() => {
@@ -510,6 +526,9 @@ export default function App() {
               <PlayerSpotlight matches={allMatches} players={players} streaks={streaks} />
               <Section title="Head-to-Head">
                 <HeadToHead players={players} matches={allMatches} streaks={streaks} />
+              </Section>
+              <Section title="Pairings">
+                <Pairings players={players} pairings={pairings} onRefresh={refresh} />
               </Section>
             </div>
           )}

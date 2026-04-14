@@ -44,7 +44,7 @@ export interface Database {
         };
         Relationships: [];
       };
-      Pairing: {
+      pairing: {
         Row: {
           created_at: string;
           id: number;
