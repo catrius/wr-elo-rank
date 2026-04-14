@@ -44,6 +44,42 @@ export interface Database {
         };
         Relationships: [];
       };
+      Pairing: {
+        Row: {
+          created_at: string;
+          id: number;
+          player1: number | null;
+          player2: number | null;
+        };
+        Insert: {
+          created_at?: string;
+          id?: number;
+          player1?: number | null;
+          player2?: number | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: number;
+          player1?: number | null;
+          player2?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'Pairing_player1_fkey';
+            columns: ['player1'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'Pairing_player2_fkey';
+            columns: ['player2'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       player: {
         Row: {
           avatar: string | null;
