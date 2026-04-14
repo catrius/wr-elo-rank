@@ -4,7 +4,6 @@ import type { Streak } from '@/App.tsx';
 import Section from '@/components/Section.tsx';
 import Pill from '@/components/Pill.tsx';
 import Avatar from '@/components/Avatar.tsx';
-import HeadToHead from '@/components/HeadToHead.tsx';
 
 interface Props {
   matches: Match[];
@@ -248,15 +247,6 @@ export default function PlayerSpotlight({ matches, players, streaks }: Props) {
           </div>
         ))}
       </div>
-
-      <hr
-        className={`
-          my-4 border-gray-100
-          dark:border-gray-800
-        `}
-      />
-
-      <HeadToHead players={players} matches={matches} streaks={streaks} />
     </Section>
   );
 }

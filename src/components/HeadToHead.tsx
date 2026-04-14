@@ -80,14 +80,6 @@ export default function HeadToHead({ players, matches: allMatches, streaks }: Pr
 
   return (
     <div className="flex flex-col gap-3">
-      <h3
-        className={`
-          text-sm font-semibold text-gray-700
-          dark:text-gray-300
-        `}
-      >
-        Head-to-Head
-      </h3>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <PlayerSelect players={sortedPlayers} value={playerAId} onChange={setPlayerAId} label="Player A" />
         <span

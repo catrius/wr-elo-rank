@@ -10,6 +10,8 @@ import AvailablePlayers from '@/components/AvailablePlayers.tsx';
 import NewMatch from '@/components/NewMatch.tsx';
 import MatchHistory from '@/components/MatchHistory.tsx';
 import PlayerSpotlight from '@/components/PlayerSpotlight.tsx';
+import HeadToHead from '@/components/HeadToHead.tsx';
+import Section from '@/components/Section.tsx';
 
 const eloRank = new EloRank(15);
 
@@ -502,8 +504,15 @@ export default function App() {
             streaks={streaks}
           />
 
-          {/* Spotlight */}
-          {allMatches && <PlayerSpotlight matches={allMatches} players={players} streaks={streaks} />}
+          {/* Spotlight + Head-to-Head */}
+          {allMatches && (
+            <div className="flex flex-col gap-6">
+              <PlayerSpotlight matches={allMatches} players={players} streaks={streaks} />
+              <Section title="Head-to-Head">
+                <HeadToHead players={players} matches={allMatches} streaks={streaks} />
+              </Section>
+            </div>
+          )}
 
           {/* History */}
           {matches && (
