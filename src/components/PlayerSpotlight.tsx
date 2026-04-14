@@ -230,7 +230,8 @@ export default function PlayerSpotlight({ matches, players, streaks }: Props) {
               {stat.player.name}
               {stat.player2 ? (
                 <>
-                  <br />& {stat.player2.name}
+                  <br />
+                  {stat.player2.name}
                 </>
               ) : (
                 ''
