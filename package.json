@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "update-database": "supabase gen types --lang=typescript --project-id tuiooqjdeafssgguyjfy > src/types/database.ts"
+    "update-database": "supabase gen types --lang=typescript --project-id tuiooqjdeafssgguyjfy > src/types/database.ts && eslint ./src/types/database.ts --fix"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",

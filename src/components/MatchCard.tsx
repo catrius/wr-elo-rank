@@ -5,6 +5,7 @@ import utc from 'dayjs/plugin/utc';
 import type { Player, Match } from '@/types/common.ts';
 import Pill from '@/components/Pill';
 import Avatar from '@/components/Avatar.tsx';
+import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 
 dayjs.extend(utc);
 
@@ -28,6 +29,8 @@ function TeamEloList({
   elos: number[];
   players: Player[] | null;
 }) {
+  const { displayName } = useDisplayName();
+
   return (
     <ul className="mb-3 space-y-1.5">
       {zip(playerIds, newElos, elos).map(([id, newElo, elo]) => {
@@ -37,8 +40,8 @@ function TeamEloList({
         return (
           <li key={id} className="flex items-center gap-2">
             {newElo && elo && <span className={diff >= 0 ? 'text-green-700' : 'text-red-700'}>{diffStr}</span>}
-            <Avatar src={player?.avatar ?? null} name={player?.name ?? ''} />
-            <span>{player?.name}</span>
+            <Avatar src={player?.avatar ?? null} name={player ? displayName(player) : ''} />
+            <span>{player ? displayName(player) : ''}</span>
           </li>
         );
       })}

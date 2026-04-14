@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Player, Match } from '@/types/common.ts';
 import Section from '@/components/Section.tsx';
 import Avatar from '@/components/Avatar.tsx';
+import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 
 interface Props {
   players: Player[];
@@ -104,7 +105,7 @@ function computeRankChanges(
   return { improved, dropped };
 }
 
-function DuoList({ duos }: { duos: DuoStat[] }) {
+function DuoList({ duos, displayName }: { duos: DuoStat[]; displayName: (player: Player) => string }) {
   if (duos.length === 0)
     return (
       <p
@@ -121,11 +122,11 @@ function DuoList({ duos }: { duos: DuoStat[] }) {
       {duos.map((duo, i) => (
         <li key={`${duo.playerA.id}-${duo.playerB.id}`} className="flex items-center gap-2 text-sm">
           <span className="w-4 shrink-0 text-right text-gray-400">{i + 1}</span>
-          <Avatar src={duo.playerA.avatar} name={duo.playerA.name} />
-          <Avatar src={duo.playerB.avatar} name={duo.playerB.name} />
+          <Avatar src={duo.playerA.avatar} name={displayName(duo.playerA)} />
+          <Avatar src={duo.playerB.avatar} name={displayName(duo.playerB)} />
           <span className="min-w-0 leading-tight">
-            <span className="block truncate">{duo.playerA.name}</span>
-            <span className="block truncate">{duo.playerB.name}</span>
+            <span className="block truncate">{displayName(duo.playerA)}</span>
+            <span className="block truncate">{displayName(duo.playerB)}</span>
           </span>
           <span
             className={`
@@ -141,7 +142,15 @@ function DuoList({ duos }: { duos: DuoStat[] }) {
   );
 }
 
-function RankList({ changes, direction }: { changes: RankChange[]; direction: 'up' | 'down' }) {
+function RankList({
+  changes,
+  direction,
+  displayName,
+}: {
+  changes: RankChange[];
+  direction: 'up' | 'down';
+  displayName: (player: Player) => string;
+}) {
   if (changes.length === 0)
     return (
       <p
@@ -158,8 +167,8 @@ function RankList({ changes, direction }: { changes: RankChange[]; direction: 'u
       {changes.map((c, i) => (
         <li key={c.player.id} className="flex items-center gap-2 text-sm">
           <span className="w-4 shrink-0 text-right text-gray-400">{i + 1}</span>
-          <Avatar src={c.player.avatar} name={c.player.name} />
-          <span className="min-w-0 truncate">{c.player.name}</span>
+          <Avatar src={c.player.avatar} name={displayName(c.player)} />
+          <span className="min-w-0 truncate">{displayName(c.player)}</span>
           <span
             className={`
               ml-auto shrink-0 text-xs
@@ -186,6 +195,7 @@ function RankList({ changes, direction }: { changes: RankChange[]; direction: 'u
 }
 
 export default function SeasonSpotlight({ players, matches, prevPlayers }: Props) {
+  const { displayName } = useDisplayName();
   const { good, bad } = useMemo(() => computeChemistry(matches, players), [matches, players]);
 
   const { improved, dropped } = useMemo(
@@ -201,16 +211,16 @@ export default function SeasonSpotlight({ players, matches, prevPlayers }: Props
       `}
     >
       <Section title="Good Chemistry">
-        <DuoList duos={good} />
+        <DuoList duos={good} displayName={displayName} />
       </Section>
       <Section title="Bad Chemistry">
-        <DuoList duos={bad} />
+        <DuoList duos={bad} displayName={displayName} />
       </Section>
       <Section title="Rank Improved">
-        <RankList changes={improved} direction="up" />
+        <RankList changes={improved} direction="up" displayName={displayName} />
       </Section>
       <Section title="Rank Dropped">
-        <RankList changes={dropped} direction="down" />
+        <RankList changes={dropped} direction="down" displayName={displayName} />
       </Section>
     </div>
   );

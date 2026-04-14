@@ -3,6 +3,7 @@ import { orderBy } from 'es-toolkit';
 import type { Player, Match } from '@/types/common.ts';
 import type { Streak } from '@/App.tsx';
 import Avatar from '@/components/Avatar.tsx';
+import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 
 interface Props {
   players: Player[] | null;
@@ -15,11 +16,13 @@ function PlayerSelect({
   value,
   onChange,
   label,
+  displayName,
 }: {
   players: Player[];
   value: number | null;
   onChange: (id: number | null) => void;
   label: string;
+  displayName: (player: Player) => string;
 }) {
   return (
     <select
@@ -34,7 +37,7 @@ function PlayerSelect({
       <option value="">Select player</option>
       {players.map((p) => (
         <option key={p.id} value={p.id}>
-          {p.name}
+          {displayName(p)}
         </option>
       ))}
     </select>
@@ -42,10 +45,14 @@ function PlayerSelect({
 }
 
 export default function HeadToHead({ players, matches: allMatches, streaks }: Props) {
+  const { displayName } = useDisplayName();
   const [playerAId, setPlayerAId] = useState<number | null>(null);
   const [playerBId, setPlayerBId] = useState<number | null>(null);
 
-  const sortedPlayers = useMemo(() => (players ? orderBy(players, ['name'], ['asc']) : []), [players]);
+  const sortedPlayers = useMemo(
+    () => (players ? orderBy(players, [(p) => displayName(p)], ['asc']) : []),
+    [players, displayName],
+  );
 
   const playerA = useMemo(() => players?.find((p) => p.id === playerAId) ?? null, [players, playerAId]);
   const playerB = useMemo(() => players?.find((p) => p.id === playerBId) ?? null, [players, playerBId]);
@@ -81,7 +88,13 @@ export default function HeadToHead({ players, matches: allMatches, streaks }: Pr
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        <PlayerSelect players={sortedPlayers} value={playerAId} onChange={setPlayerAId} label="Player A" />
+        <PlayerSelect
+          players={sortedPlayers}
+          value={playerAId}
+          onChange={setPlayerAId}
+          label="Player A"
+          displayName={displayName}
+        />
         <span
           className={`
             text-xs font-semibold text-gray-400
@@ -90,7 +103,13 @@ export default function HeadToHead({ players, matches: allMatches, streaks }: Pr
         >
           VS
         </span>
-        <PlayerSelect players={sortedPlayers} value={playerBId} onChange={setPlayerBId} label="Player B" />
+        <PlayerSelect
+          players={sortedPlayers}
+          value={playerBId}
+          onChange={setPlayerBId}
+          label="Player B"
+          displayName={displayName}
+        />
       </div>
 
       {playerA && playerB && results ? (
@@ -106,8 +125,8 @@ export default function HeadToHead({ players, matches: allMatches, streaks }: Pr
         ) : (
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
             <div className="flex flex-col items-center gap-1">
-              <Avatar src={playerA.avatar} name={playerA.name} streak={streaks[playerA.id]} />
-              <span className="text-sm font-semibold">{playerA.name}</span>
+              <Avatar src={playerA.avatar} name={displayName(playerA)} streak={streaks[playerA.id]} />
+              <span className="text-sm font-semibold">{displayName(playerA)}</span>
               <span
                 className={`
                   text-2xl font-bold text-indigo-600
@@ -128,8 +147,8 @@ export default function HeadToHead({ players, matches: allMatches, streaks }: Pr
               </span>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <Avatar src={playerB.avatar} name={playerB.name} streak={streaks[playerB.id]} />
-              <span className="text-sm font-semibold">{playerB.name}</span>
+              <Avatar src={playerB.avatar} name={displayName(playerB)} streak={streaks[playerB.id]} />
+              <span className="text-sm font-semibold">{displayName(playerB)}</span>
               <span
                 className={`
                   text-2xl font-bold text-indigo-600

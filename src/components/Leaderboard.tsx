@@ -5,6 +5,7 @@ import type { Player } from '@/types/common.ts';
 import type { Streak } from '@/App.tsx';
 import Section from '@/components/Section.tsx';
 import Avatar from '@/components/Avatar.tsx';
+import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 
 type SortKey = 'name' | 'elo' | 'win' | 'losses' | 'total' | 'winrate';
 
@@ -22,6 +23,8 @@ export default function Leaderboard({
   streaks: Record<number, Streak>;
   linkToPlayer?: boolean;
 }) {
+  const { displayName } = useDisplayName();
+
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({
     key: 'elo',
     dir: 'desc',
@@ -44,7 +47,7 @@ export default function Leaderboard({
         case 'winrate':
           return p.total ? p.win / p.total : -Infinity; // puts 0-games at bottom for desc
         case 'name':
-          return p.name;
+          return displayName(p);
         case 'elo':
           return p.elo;
         case 'win':
@@ -56,8 +59,8 @@ export default function Leaderboard({
       }
     };
     // Second key 'name' for stable/pleasant ordering on ties
-    return orderBy(players, [iteratee, (p) => p.name], [sort.dir, 'asc']);
-  }, [players, sort]);
+    return orderBy(players, [iteratee, (p) => displayName(p)], [sort.dir, 'asc']);
+  }, [players, sort, displayName]);
 
   const columns: { key: SortKey; label: string; align: 'left' | 'right' }[] = [
     { key: 'name', label: 'Player', align: 'left' },
@@ -122,13 +125,13 @@ export default function Leaderboard({
                         dark:text-indigo-400
                       `}
                     >
-                      <Avatar src={row.avatar} name={row.name} streak={streaks[row.id]} />
-                      {row.name}
+                      <Avatar src={row.avatar} name={displayName(row)} streak={streaks[row.id]} />
+                      {displayName(row)}
                     </Link>
                   ) : (
                     <span className="inline-flex items-center gap-2">
-                      <Avatar src={row.avatar} name={row.name} streak={streaks[row.id]} />
-                      {row.name}
+                      <Avatar src={row.avatar} name={displayName(row)} streak={streaks[row.id]} />
+                      {displayName(row)}
                     </span>
                   )}
                 </td>

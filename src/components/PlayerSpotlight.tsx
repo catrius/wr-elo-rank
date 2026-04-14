@@ -4,6 +4,7 @@ import type { Streak } from '@/App.tsx';
 import Section from '@/components/Section.tsx';
 import Pill from '@/components/Pill.tsx';
 import Avatar from '@/components/Avatar.tsx';
+import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 
 interface Props {
   matches: Match[];
@@ -187,6 +188,7 @@ function computeOilAndWater(finished: Match[], players: Player[]): StatCard | nu
 }
 
 export default function PlayerSpotlight({ matches, players, streaks, seasonName }: Props) {
+  const { displayName } = useDisplayName();
   const stats = useMemo(() => {
     if (!players || players.length === 0) return [];
     const finished = completedMatches(matches);
@@ -229,17 +231,17 @@ export default function PlayerSpotlight({ matches, players, streaks, seasonName 
               {stat.label}
             </span>
             <div className="flex items-center gap-1">
-              <Avatar src={stat.player.avatar} name={stat.player.name} streak={streaks[stat.player.id]} />
+              <Avatar src={stat.player.avatar} name={displayName(stat.player)} streak={streaks[stat.player.id]} />
               {stat.player2 && (
-                <Avatar src={stat.player2.avatar} name={stat.player2.name} streak={streaks[stat.player2.id]} />
+                <Avatar src={stat.player2.avatar} name={displayName(stat.player2)} streak={streaks[stat.player2.id]} />
               )}
             </div>
             <span className="text-sm font-semibold">
-              {stat.player.name}
+              {displayName(stat.player)}
               {stat.player2 ? (
                 <>
                   <br />
-                  {stat.player2.name}
+                  {displayName(stat.player2)}
                 </>
               ) : (
                 ''

@@ -7,10 +7,12 @@ import utc from 'dayjs/plugin/utc';
 import supabase from '@/lib/supabase.ts';
 import type { Player, Match, Season } from '@/types/common.ts';
 import Avatar from '@/components/Avatar.tsx';
+import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 
 dayjs.extend(utc);
 
 export default function PlayerPage() {
+  const { displayName } = useDisplayName();
   const { id } = useParams<{ id: string }>();
   const playerId = Number(id);
   const [player, setPlayer] = useState<Player | null>(null);
@@ -183,7 +185,7 @@ export default function PlayerPage() {
               disabled:cursor-wait disabled:opacity-50
             `}
           >
-            <Avatar src={player.avatar} name={player.name} size="lg" />
+            <Avatar src={player.avatar} name={displayName(player)} size="lg" />
             <span
               className={`
                 absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gray-700 text-white

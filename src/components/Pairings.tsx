@@ -3,6 +3,7 @@ import { orderBy } from 'es-toolkit';
 import type { Player, Pairing } from '@/types/common.ts';
 import supabase from '@/lib/supabase.ts';
 import Avatar from '@/components/Avatar.tsx';
+import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 
 interface Props {
   players: Player[] | null;
@@ -16,12 +17,14 @@ function PlayerSelect({
   onChange,
   label,
   excludeId = null,
+  displayName,
 }: {
   players: Player[];
   value: number | null;
   onChange: (id: number | null) => void;
   label: string;
   excludeId?: number | null;
+  displayName: (player: Player) => string;
 }) {
   return (
     <select
@@ -38,7 +41,7 @@ function PlayerSelect({
         .filter((p) => (excludeId ? p.id !== excludeId : true))
         .map((p) => (
           <option key={p.id} value={p.id}>
-            {p.name}
+            {displayName(p)}
           </option>
         ))}
     </select>
@@ -46,12 +49,16 @@ function PlayerSelect({
 }
 
 export default function Pairings({ players, pairings, onRefresh }: Props) {
+  const { displayName } = useDisplayName();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [player1, setPlayer1] = useState<number | null>(null);
   const [player2, setPlayer2] = useState<number | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
-  const sortedPlayers = useMemo(() => (players ? orderBy(players, ['name'], ['asc']) : []), [players]);
+  const sortedPlayers = useMemo(
+    () => (players ? orderBy(players, [(p) => displayName(p)], ['asc']) : []),
+    [players, displayName],
+  );
 
   const playerMap = useMemo(() => {
     const map: Record<number, Player> = {};
@@ -131,11 +138,12 @@ export default function Pairings({ players, pairings, onRefresh }: Props) {
                       onChange={setPlayer1}
                       label="Player 1"
                       excludeId={player2}
+                      displayName={displayName}
                     />
                   ) : (
                     <div className="flex items-center gap-2">
-                      <Avatar src={p1?.avatar ?? null} name={p1?.name ?? '?'} />
-                      <span className="truncate text-sm font-medium">{p1?.name ?? '?'}</span>
+                      <Avatar src={p1?.avatar ?? null} name={p1 ? displayName(p1) : '?'} />
+                      <span className="truncate text-sm font-medium">{p1 ? displayName(p1) : '?'}</span>
                     </div>
                   )}
                   {editing ? (
@@ -145,11 +153,12 @@ export default function Pairings({ players, pairings, onRefresh }: Props) {
                       onChange={setPlayer2}
                       label="Player 2"
                       excludeId={player1}
+                      displayName={displayName}
                     />
                   ) : (
                     <div className="flex items-center gap-2">
-                      <Avatar src={p2?.avatar ?? null} name={p2?.name ?? '?'} />
-                      <span className="truncate text-sm font-medium">{p2?.name ?? '?'}</span>
+                      <Avatar src={p2?.avatar ?? null} name={p2 ? displayName(p2) : '?'} />
+                      <span className="truncate text-sm font-medium">{p2 ? displayName(p2) : '?'}</span>
                     </div>
                   )}
                 </div>
@@ -238,6 +247,7 @@ export default function Pairings({ players, pairings, onRefresh }: Props) {
               onChange={setPlayer1}
               label="Player 1"
               excludeId={player2}
+              displayName={displayName}
             />
             <PlayerSelect
               players={sortedPlayers}
@@ -245,6 +255,7 @@ export default function Pairings({ players, pairings, onRefresh }: Props) {
               onChange={setPlayer2}
               label="Player 2"
               excludeId={player1}
+              displayName={displayName}
             />
           </div>
           <div className="flex shrink-0 gap-1">

@@ -4,6 +4,7 @@ import type { Streak } from '@/App.tsx';
 import Pill from '@/components/Pill';
 import Section from '@/components/Section.tsx';
 import Avatar from '@/components/Avatar.tsx';
+import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 
 interface Props {
   players: Player[] | null;
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export default function AvailablePlayers({ players, availableIds, onToggle, streaks }: Props) {
+  const { displayName } = useDisplayName();
+
   return (
     <Section title="Available Players" actions={<Pill>{availableIds.length} players</Pill>}>
       <div
@@ -23,7 +26,7 @@ export default function AvailablePlayers({ players, availableIds, onToggle, stre
         `}
       >
         {players &&
-          orderBy(players, ['name'], ['asc'])?.map((player) => (
+          orderBy(players, [(p) => displayName(p)], ['asc'])?.map((player) => (
             <label
               key={player.id}
               className={`
@@ -38,8 +41,8 @@ export default function AvailablePlayers({ players, availableIds, onToggle, stre
                 checked={availableIds.includes(player.id)}
                 onChange={() => onToggle(player.id)}
               />
-              <Avatar src={player.avatar} name={player.name} streak={streaks[player.id]} />
-              <span className="flex-1">{player.name}</span>
+              <Avatar src={player.avatar} name={displayName(player)} streak={streaks[player.id]} />
+              <span className="flex-1">{displayName(player)}</span>
               <span
                 className={`
                   text-xs text-gray-500

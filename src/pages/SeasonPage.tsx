@@ -25,9 +25,9 @@ export default function SeasonPage() {
   const [getSeasons, { data: seasonsData }] = useSupaQuery(getSeasonsCallback);
   const seasons = seasonsData as Season[] | null;
 
-  const getPlayersCallback = useCallback(async () => supabase.from('player').select('id, name, avatar'), []);
+  const getPlayersCallback = useCallback(async () => supabase.from('player').select('id, name, avatar, ingame'), []);
   const [getPlayers, { data: playerData }] = useSupaQuery(getPlayersCallback);
-  const allPlayers = playerData as Pick<Player, 'id' | 'name' | 'avatar'>[] | null;
+  const allPlayers = playerData as Pick<Player, 'id' | 'name' | 'avatar' | 'ingame'>[] | null;
 
   const season = useMemo(() => seasons?.find((s) => s.id === seasonId) ?? null, [seasons, seasonId]);
 
@@ -44,7 +44,7 @@ export default function SeasonPage() {
       if (!raw || !playerMap) return null;
       return raw.map((sp) => {
         const info = playerMap.get(sp.id!);
-        return { ...sp, name: info?.name ?? '', avatar: info?.avatar ?? null } as Player;
+        return { ...sp, name: info?.name ?? '', avatar: info?.avatar ?? null, ingame: info?.ingame ?? null } as Player;
       });
     },
     [playerMap],
