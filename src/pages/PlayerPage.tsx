@@ -8,6 +8,7 @@ import supabase from '@/lib/supabase.ts';
 import type { Player, Match, Season } from '@/types/common.ts';
 import Avatar from '@/components/Avatar.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
+import PencilIcon from '@/images/pencil.svg?react';
 
 dayjs.extend(utc);
 
@@ -191,14 +192,7 @@ export default function PlayerPage() {
                 absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gray-700 text-white
               `}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
-                <path
-                  d={
-                    'M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885' +
-                    'L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z'
-                  }
-                />
-              </svg>
+              <PencilIcon className="h-3 w-3" />
             </span>
           </button>
           <input
