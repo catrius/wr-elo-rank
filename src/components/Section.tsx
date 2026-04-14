@@ -10,7 +10,7 @@ function Section({ title, children, actions = null }: Props) {
   return (
     <section
       className={`
-        rounded-2xl border border-gray-100 bg-white p-4 shadow-sm
+        min-w-0 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm
         md:p-6
         dark:border-gray-800 dark:bg-gray-900
       `}
