@@ -1,12 +1,32 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
+import { useAuth } from '@/contexts/AuthContext.tsx';
 import useDarkMode from '@/hooks/useDarkMode.ts';
+import supabase from '@/lib/supabase.ts';
+import type { Player } from '@/types/common.ts';
 
 export default function ToolMenu() {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const { useIngame, toggleIngame } = useDisplayName();
+  const navigate = useNavigate();
+  const { user, signIn } = useAuth();
+  const { displayName, useIngame, toggleIngame } = useDisplayName();
   const { dark, toggleDark } = useDarkMode();
+  const [player, setPlayer] = useState<Player | null>(null);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    supabase
+      .from('player')
+      .select('*')
+      .or(`email.eq.${user.email},personal_email.eq.${user.email}`)
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (data) setPlayer(data);
+      });
+  }, [user?.email]);
 
   const handleClickOutside = useCallback((e: MouseEvent) => {
     if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -31,6 +51,43 @@ export default function ToolMenu() {
             dark:border-gray-700 dark:bg-gray-800
           `}
         >
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              if (user) navigate('/user');
+              else signIn();
+            }}
+            className={`
+              flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700
+              transition-colors
+              hover:bg-gray-100
+              dark:text-gray-300 dark:hover:bg-gray-700
+            `}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            {user ? (player ? displayName(player) : 'Profile') : 'Login'}
+          </button>
+
+          <div
+            className={`
+              border-b border-gray-200
+              dark:border-gray-700
+            `}
+          />
+
           <label
             className={`
               flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700

@@ -1,12 +1,10 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { upload } from '@vercel/blob/client';
 import supabase from '@/lib/supabase.ts';
 import type { Player, Match } from '@/types/common.ts';
 import Avatar from '@/components/Avatar.tsx';
 import EloChart from '@/components/EloChart.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
-import PencilIcon from '@/images/pencil.svg?react';
 
 export default function PlayerPage() {
   const { displayName } = useDisplayName();
@@ -14,16 +12,11 @@ export default function PlayerPage() {
   const playerId = Number(id);
   const [player, setPlayer] = useState<Player | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
-  const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchPlayer = useCallback(async () => {
     const { data } = await supabase.from('player').select().eq('id', playerId).single();
     if (data) {
       setPlayer(data as Player);
-      setName(data.name);
     }
   }, [playerId]);
 
@@ -49,38 +42,6 @@ export default function PlayerPage() {
     fetchPlayer();
     fetchMatches();
   }, [fetchPlayer, fetchMatches]);
-
-  const handleAvatarChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file || !player) return;
-
-      setUploading(true);
-      try {
-        const blob = await upload(`avatars/${player.id}-${Date.now()}`, file, {
-          access: 'public',
-          handleUploadUrl: '/api/upload',
-        });
-        await supabase.from('player').update({ avatar: blob.url }).eq('id', player.id);
-        await fetchPlayer();
-      } catch (err) {
-        // eslint-disable-next-line no-alert
-        alert(`Upload failed: ${(err as Error).message}`);
-      } finally {
-        setUploading(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      }
-    },
-    [player, fetchPlayer],
-  );
-
-  const handleSave = async () => {
-    if (!player || name.trim() === '' || name.trim() === player.name) return;
-    setSaving(true);
-    await supabase.from('player').update({ name: name.trim() }).eq('id', player.id);
-    await fetchPlayer();
-    setSaving(false);
-  };
 
   if (!player) {
     return (
@@ -126,57 +87,16 @@ export default function PlayerPage() {
           &larr; Back
         </Link>
 
-        <div className="mb-6 flex items-stretch gap-2">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
+        <div className="mb-6 flex items-center gap-4">
+          <Avatar src={player.avatar} name={displayName(player)} size="lg" />
+          <h1
             className={`
-              group relative shrink-0 cursor-pointer self-center rounded-full
-              disabled:cursor-wait disabled:opacity-50
-            `}
-          >
-            <Avatar src={player.avatar} name={displayName(player)} size="lg" />
-            <span
-              className={`
-                absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gray-700 text-white
-              `}
-            >
-              <PencilIcon className="h-3 w-3" />
-            </span>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            className="hidden"
-            onChange={handleAvatarChange}
-          />
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSave();
-            }}
-            className={`
-              min-w-0 flex-1 rounded border border-gray-300 bg-transparent px-2 py-1 text-2xl font-bold tracking-tight
+              text-2xl font-bold tracking-tight
               md:text-3xl
-              dark:border-gray-600
-            `}
-          />
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || name.trim() === '' || name.trim() === player.name}
-            className={`
-              shrink-0 rounded bg-blue-600 px-6 py-1.5 text-xl font-medium text-white
-              hover:bg-blue-700
-              disabled:opacity-50
             `}
           >
-            &#10003;
-          </button>
+            {displayName(player)}
+          </h1>
         </div>
 
         <h2
