@@ -20,7 +20,7 @@ export default function ToolMenu() {
     supabase
       .from('player')
       .select('*')
-      .or(`email.eq.${user.email},personal_email.eq.${user.email}`)
+      .eq('email', user.email)
       .limit(1)
       .single()
       .then(({ data }) => {
@@ -78,7 +78,7 @@ export default function ToolMenu() {
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
               <circle cx="12" cy="7" r="4" />
             </svg>
-            {user ? (player ? displayName(player) : 'Profile') : 'Login'}
+            {user ? (player ? displayName(player) : 'Claim') : 'Login'}
           </button>
 
           <div

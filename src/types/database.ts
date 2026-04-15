@@ -89,7 +89,6 @@ export interface Database {
           id: number;
           ingame: string | null;
           name: string;
-          personal_email: string | null;
           total: number;
           win: number;
         };
@@ -101,7 +100,6 @@ export interface Database {
           id?: number;
           ingame?: string | null;
           name?: string;
-          personal_email?: string | null;
           total?: number;
           win?: number;
         };
@@ -113,7 +111,6 @@ export interface Database {
           id?: number;
           ingame?: string | null;
           name?: string;
-          personal_email?: string | null;
           total?: number;
           win?: number;
         };
