@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { DisplayNameProvider } from '@/contexts/DisplayNameContext.tsx';
-import IngameToggle from '@/components/IngameToggle.tsx';
+import ToolMenu from '@/components/ToolMenu.tsx';
 import './index.css';
 import App from './App.tsx';
 import PlayerPage from './pages/PlayerPage.tsx';
@@ -15,7 +15,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/players/:id" element={<PlayerPage />} />
         <Route path="/season/:id" element={<SeasonPage />} />
       </Routes>
-      <IngameToggle />
+      <ToolMenu />
     </DisplayNameProvider>
   </BrowserRouter>,
 );

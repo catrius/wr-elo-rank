@@ -7,7 +7,6 @@ import HeadToHead from '@/components/HeadToHead.tsx';
 import Pairings from '@/components/Pairings.tsx';
 import Section from '@/components/Section.tsx';
 import SeasonNav from '@/components/SeasonNav.tsx';
-import useDarkMode from '@/hooks/useDarkMode.ts';
 import { GameDataProvider, useGameDataContext } from '@/contexts/GameDataContext.tsx';
 import { TeamsProvider } from '@/contexts/TeamsContext.tsx';
 import { MatchActionsProvider } from '@/contexts/MatchActionsContext.tsx';
@@ -54,8 +53,6 @@ function AppContent() {
 }
 
 export default function App() {
-  const { dark, toggleDark } = useDarkMode();
-
   return (
     <div
       className={`
@@ -71,32 +68,18 @@ export default function App() {
       >
         <header
           className={`
-            mb-6 flex items-center justify-between gap-4
+            mb-6 flex items-center gap-4
             md:mb-10
           `}
         >
-          <div>
-            <h1
-              className={`
-                text-2xl font-bold tracking-tight
-                md:text-3xl
-              `}
-            >
-              Go Go Toolkit
-            </h1>
-          </div>
-          <button
-            type="button"
-            onClick={toggleDark}
+          <h1
             className={`
-              cursor-pointer rounded-lg border border-gray-200 bg-white p-1.5 text-base shadow-sm transition-colors
-              hover:bg-gray-100
-              dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700
+              text-2xl font-bold tracking-tight
+              md:text-3xl
             `}
-            aria-label="Toggle dark mode"
           >
-            {dark ? '\u2600\uFE0F' : '\uD83C\uDF19'}
-          </button>
+            Go Go Toolkit
+          </h1>
         </header>
 
         <GameDataProvider>

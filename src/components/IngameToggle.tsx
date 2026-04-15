@@ -9,7 +9,7 @@ export default function IngameToggle() {
       type="button"
       onClick={toggleIngame}
       className={`
-        fixed right-4 bottom-4 z-50 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border
+        fixed right-4 bottom-4 z-50 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full border
         text-xs leading-tight font-medium shadow-lg transition-colors
         ${
           useIngame
@@ -27,7 +27,7 @@ export default function IngameToggle() {
       `}
       aria-label="Toggle ingame names"
     >
-      <GamepadIcon className="h-6 w-6" />
+      <GamepadIcon className="h-7 w-7" />
     </button>
   );
 }
