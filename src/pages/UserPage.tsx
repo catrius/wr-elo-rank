@@ -20,7 +20,8 @@ export default function UserPage() {
   const [playerLoading, setPlayerLoading] = useState(true);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [pendingAvatar, setPendingAvatar] = useState<File | null>(null);
+  const [pendingAvatarPreview, setPendingAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [unclaimedPlayers, setUnclaimedPlayers] = useState<Player[]>([]);
@@ -79,36 +80,40 @@ export default function UserPage() {
   );
 
   const handleAvatarChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file || !player) return;
 
-      setUploading(true);
-      try {
-        const blob = await upload(`avatars/${player.id}-${Date.now()}`, file, {
-          access: 'public',
-          handleUploadUrl: '/api/upload',
-        });
-        await supabase.from('player').update({ avatar: blob.url }).eq('id', player.id);
-        await fetchPlayer();
-      } catch (err) {
-        // eslint-disable-next-line no-alert
-        alert(`Upload failed: ${(err as Error).message}`);
-      } finally {
-        setUploading(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      }
+      setPendingAvatar(file);
+      setPendingAvatarPreview(URL.createObjectURL(file));
+      if (fileInputRef.current) fileInputRef.current.value = '';
     },
-    [player, fetchPlayer],
+    [player],
   );
 
-  const hasChanges = player && name.trim() !== '' && name.trim() !== player.name;
+  const hasChanges = player && name.trim() !== '' && (name.trim() !== player.name || pendingAvatar);
 
   const handleSave = useCallback(async () => {
     if (!user || !player || !hasChanges) return;
     setSaving(true);
     try {
-      await supabase.from('player').update({ name: name.trim() }).eq('id', player.id);
+      const updates: Record<string, string> = {};
+      if (name.trim() !== player.name) updates.name = name.trim();
+
+      if (pendingAvatar) {
+        const blob = await upload(`avatars/${player.id}-${Date.now()}`, pendingAvatar, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+        });
+        updates.avatar = blob.url;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('player').update(updates).eq('id', player.id);
+      }
+
+      setPendingAvatar(null);
+      setPendingAvatarPreview(null);
       await fetchPlayer();
     } catch (err) {
       // eslint-disable-next-line no-alert
@@ -116,7 +121,7 @@ export default function UserPage() {
     } finally {
       setSaving(false);
     }
-  }, [user, player, hasChanges, name, fetchPlayer]);
+  }, [user, player, hasChanges, name, pendingAvatar, fetchPlayer]);
 
   if (loading || playerLoading) {
     return (
@@ -317,7 +322,8 @@ export default function UserPage() {
           <div className="flex items-center gap-8">
             <div
               className={`
-                w-32 shrink-0 text-base text-gray-500
+                w-16 shrink-0 text-base text-gray-500
+                md:w-32
                 dark:text-gray-400
               `}
             >
@@ -326,14 +332,14 @@ export default function UserPage() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
+              disabled={saving}
               className={`
                 group relative shrink-0 cursor-pointer rounded-full
                 disabled:cursor-wait disabled:opacity-50
               `}
             >
               <img
-                src={player?.avatar || DEFAULT_AVATAR}
+                src={pendingAvatarPreview || player?.avatar || DEFAULT_AVATAR}
                 alt={player?.name || ''}
                 className="h-16 w-16 shrink-0 rounded-full object-cover"
               />
@@ -364,7 +370,8 @@ export default function UserPage() {
           <div className="flex items-baseline gap-8">
             <div
               className={`
-                w-32 shrink-0 text-base text-gray-500
+                w-16 shrink-0 text-base text-gray-500
+                md:w-32
                 dark:text-gray-400
               `}
             >
@@ -384,7 +391,8 @@ export default function UserPage() {
           <div className="flex items-baseline gap-8">
             <div
               className={`
-                w-32 shrink-0 text-base text-gray-500
+                w-16 shrink-0 text-base text-gray-500
+                md:w-32
                 dark:text-gray-400
               `}
             >
@@ -396,13 +404,14 @@ export default function UserPage() {
           <div className="flex items-baseline gap-8">
             <div
               className={`
-                w-32 shrink-0 text-base text-gray-500
+                w-16 shrink-0 text-base text-gray-500
+                md:w-32
                 dark:text-gray-400
               `}
             >
               Email
             </div>
-            <div className="text-lg">{player?.email}</div>
+            <div className="min-w-0 truncate text-lg">{player?.email}</div>
           </div>
 
           <button
