@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "update-database": "supabase gen types --lang=typescript --project-id tuiooqjdeafssgguyjfy > src/types/database.ts && eslint ./src/types/database.ts --fix",
+    "update-claude": "LAST_HASH=$(grep -oP '(?<=last-updated: )[a-f0-9]+' CLAUDE.md) && DIFF=$(git diff --name-only \"$LAST_HASH\" HEAD -- src/) && if [ -z \"$DIFF\" ]; then echo 'CLAUDE.md is up to date.'; else claude -p \"CLAUDE.md has a last-updated commit hash. These src/ files changed since then: $DIFF — Read each changed file and update the relevant sections of CLAUDE.md. Then update the last-updated hash to $(git rev-parse HEAD). Keep the Commands, Code Style, and Feedback sections unchanged.\" --allowedTools Read Edit Write Bash Glob Grep; fi",
+    "update-claude:full": "claude -p \"Scan the entire repo and rewrite CLAUDE.md with a full inventory of every component, hook, context, util, page, and route. Keep the Commands, Code Style, and Feedback sections unchanged. Update the last-updated hash at the top to $(git rev-parse HEAD). Be thorough.\" --allowedTools Read Edit Write Bash Glob Grep",
     "prepare": "husky"
   },
   "dependencies": {

@@ -1,3 +1,5 @@
+<!-- last-updated: e17278bceaa7f92bde0cb1f38f6755978d108af9 -->
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
