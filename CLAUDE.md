@@ -188,3 +188,4 @@ Auth-gated. If claimed player: edit profile (avatar upload via @vercel/blob, nam
 
 - **Always run `npm run lint` and fix all violations before considering code changes done.** Prettier and ESLint v9 flat config enforce the style rules above — don't rely on eyeballing it.
 - **Preserve existing comments during refactors.** When extracting code into new components/files, audit the original for comments and ensure each one lands in the correct destination file. Don't silently drop them.
+- **Update CLAUDE.md after significant changes.** When adding/removing files or making large refactors, edit only the affected sections of CLAUDE.md inline — keep it minimal. Don't rewrite the whole file or run the npm scripts (those are for manual use).
