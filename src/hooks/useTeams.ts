@@ -4,9 +4,15 @@ import { some } from 'es-toolkit/compat';
 import supabase from '@/lib/supabase.ts';
 import useSupaQuery from '@/hooks/useSupaQuery.ts';
 import type { Player, Match, Pairing } from '@/types/common.ts';
+import type { Streak } from '@/utils/streaks.ts';
 import { findTeams } from '@/utils/suggestTeams.ts';
 
-export default function useTeams(players: Player[] | null, matches: Match[] | null, pairings: Pairing[] | null) {
+export default function useTeams(
+  players: Player[] | null,
+  matches: Match[] | null,
+  pairings: Pairing[] | null,
+  streaks: Record<number, Streak> = {},
+) {
   const [teamA, setTeamA] = useState<Player[]>([]);
   const [teamB, setTeamB] = useState<Player[]>([]);
   const [availableIds, setAvailableIds] = useState<number[]>([]);
@@ -105,11 +111,11 @@ export default function useTeams(players: Player[] | null, matches: Match[] | nu
   const suggestTeams = useCallback(
     (tolerance = 20) => {
       if (!players) return;
-      const { teamA: a, teamB: b } = findTeams(available, pairings, tolerance);
+      const { teamA: a, teamB: b } = findTeams(available, pairings, tolerance, streaks);
       setTeamA(a);
       setTeamB(b);
     },
-    [available, pairings, players],
+    [available, pairings, players, streaks],
   );
 
   useEffect(() => {

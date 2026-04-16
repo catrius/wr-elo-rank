@@ -38,11 +38,11 @@ Select players → form teams (drag-drop or auto-suggest) → start match (DB ro
 
 ### Elo calculation
 
-Uses `elo-rank` library with K-factor 15 (`src/utils/elo.ts`). Each player's expected score is calculated against the opposing team's mean Elo. Winner gets result=1, loser gets result=0.
+Direct Elo math in `src/utils/elo.ts` (no external library). Dynamic K-factor based on games played: K=25 (<10 games), K=20 (10–30 games), K=15 (30+ games). Each player's expected score is calculated against the opposing team's mean Elo. Winner gets result=1, loser gets result=0.
 
 ### Team suggestion algorithm
 
-DFS in `src/utils/suggestTeams.ts` — samples up to 10 available players, tries all team splits to minimize Elo differential. Enforces pairing constraints (paired players must stay on same team). If multiple solutions exist within tolerance, picks one randomly for variety.
+DFS in `src/utils/suggestTeams.ts` — samples up to 10 available players, tries all team splits to minimize Elo differential. Two effective Elo adjustments for balancing only (stored Elo unchanged): (1) players above the group mean get a 25% gap boost, biasing them onto weaker teams; (2) streak form adjustment of +/- 5 Elo per streak game beyond 2 (hot players get harder matchups, cold players get easier ones). Enforces pairing constraints (paired players must stay on same team). If multiple solutions exist within tolerance, picks one randomly for variety.
 
 ## Routing (src/main.tsx)
 
@@ -105,7 +105,8 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 
 ### elo.ts
 
-- `calculateMatchResult(match, result, players)` — Computes new Elos for both teams using EloRank (K=15). Each player rated against opposing team's mean Elo. Returns `{ teamANewElos, teamBNewElos, updatedAPlayers, updatedBPlayers }`.
+- `getKFactor(totalGames)` — Returns dynamic K-factor: 25 (<10 games), 20 (10–30), 15 (30+).
+- `calculateMatchResult(match, result, players)` — Computes new Elos for both teams using dynamic K per player. Each player rated against opposing team's mean Elo. Returns `{ teamANewElos, teamBNewElos, updatedAPlayers, updatedBPlayers }`.
 - `calculateRevertedPlayers(match, players)` — Reverses a completed match's Elo and win/total changes. Computes delta from stored elos vs new_elos, subtracts from current player state.
 
 ### streaks.ts
@@ -114,7 +115,7 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 
 ### suggestTeams.ts
 
-- `findTeams(available, pairings, tolerance)` — DFS algorithm. Samples up to 10 players, calculates target Elo sum for Team A, explores all partitions. Enforces pairing constraints (paired players on same team). If solutions exist within tolerance, picks randomly; otherwise returns best match.
+- `findTeams(available, pairings, tolerance, streaks?)` — DFS algorithm. Samples up to 10 players, applies effective Elo adjustments (25% gap handicap + streak form ±5/game), calculates target Elo sum for Team A, explores all partitions. Enforces pairing constraints (paired players on same team). If solutions exist within tolerance, picks randomly; otherwise returns best match.
 
 ## Components (src/components/)
 
@@ -168,7 +169,6 @@ Auth-gated. If claimed player: edit profile (avatar upload via @vercel/blob, nam
 
 - **react** 19.1, **react-router-dom** 7.14 — UI framework + routing
 - **@supabase/supabase-js** 2.76 — Database client
-- **elo-rank** 1.0 — Elo rating calculation (K=15)
 - **es-toolkit** — Utility functions (meanBy, sumBy, orderBy, sampleSize, some, find, zipWith)
 - **recharts** 3.8 — Charts (EloChart)
 - **dayjs** — Date formatting

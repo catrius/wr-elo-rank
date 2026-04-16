@@ -1,24 +1,36 @@
-import EloRank from 'elo-rank';
 import { mean, zipWith } from 'es-toolkit';
 import { find } from 'es-toolkit/compat';
 import type { Player, Match } from '@/types/common.ts';
 
-const eloRank = new EloRank(15);
+// Dynamic K-factor: new players adjust faster, established players are more stable
+export function getKFactor(totalGames: number): number {
+  if (totalGames < 10) return 25;
+  if (totalGames <= 30) return 20;
+  return 15;
+}
+
+function getExpected(playerElo: number, opponentElo: number): number {
+  return 1 / (1 + 10 ** ((opponentElo - playerElo) / 400));
+}
 
 export function calculateMatchResult(match: Match, result: 'A' | 'B', players: Player[]) {
   const meanTeamAElo = mean(match.team_a_elos);
   const meanTeamBElo = mean(match.team_b_elos);
 
-  const teamANewElos = match.team_a_elos.map((playerAElo) => {
-    const resultNumber = result === 'A' ? 1 : 0;
-    const expectedScoreA = eloRank.getExpected(playerAElo, meanTeamBElo);
-    return eloRank.updateRating(expectedScoreA, resultNumber, playerAElo);
+  const teamANewElos = match.team_a_elos.map((playerAElo, i) => {
+    const player = find(players, { id: match.team_a_players[i] });
+    const k = getKFactor(player?.total ?? 0);
+    const actual = result === 'A' ? 1 : 0;
+    const expected = getExpected(playerAElo, meanTeamBElo);
+    return Math.round(playerAElo + k * (actual - expected));
   });
 
-  const teamBNewElos = match.team_b_elos.map((playerBElo) => {
-    const resultNumber = result === 'B' ? 1 : 0;
-    const expectedScoreB = eloRank.getExpected(playerBElo, meanTeamAElo);
-    return eloRank.updateRating(expectedScoreB, resultNumber, playerBElo);
+  const teamBNewElos = match.team_b_elos.map((playerBElo, i) => {
+    const player = find(players, { id: match.team_b_players[i] });
+    const k = getKFactor(player?.total ?? 0);
+    const actual = result === 'B' ? 1 : 0;
+    const expected = getExpected(playerBElo, meanTeamAElo);
+    return Math.round(playerBElo + k * (actual - expected));
   });
 
   const updatedAPlayers: Partial<Player>[] = zipWith(

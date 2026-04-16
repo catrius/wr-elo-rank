@@ -40,7 +40,7 @@ const TeamsContext = createContext<TeamsContextValue>({
 });
 
 export function TeamsProvider({ children }: { children: ReactNode }) {
-  const { players, matches, pairings } = useGameDataContext();
+  const { players, matches, pairings, streaks } = useGameDataContext();
   const {
     teamA,
     teamB,
@@ -57,7 +57,7 @@ export function TeamsProvider({ children }: { children: ReactNode }) {
     suggestTeams,
     lastMatch,
     createMatch,
-  } = useTeams(players, matches, pairings);
+  } = useTeams(players, matches, pairings, streaks);
 
   const value = useMemo(
     () => ({
