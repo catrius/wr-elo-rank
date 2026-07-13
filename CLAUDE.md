@@ -117,6 +117,12 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 
 - `findTeams(available, pairings, tolerance, streaks?)` — DFS algorithm. Samples up to 10 players, applies effective Elo adjustments (25% gap handicap + streak form ±5/game), calculates target Elo sum for Team A, explores all partitions. Enforces pairing constraints (paired players on same team). If solutions exist within tolerance, picks randomly; otherwise returns best match.
 
+### weeklyStats.ts
+
+- `getWeekWindow(matches)` — Finds the Mon–Sun calendar week of the most recent match. Returns `{ startTs, endTs, label }` where label is "This Week · MMM D–MMM D" or "Last Week · …". Returns null if no matches.
+- `computeWeeklyStats(matches, players, week)` — Per-player stats (eloDelta, wins, losses, total) for completed matches within the week window.
+- `countWeekMatches(matches, week)` — Count of completed matches in the week window.
+
 ## Components (src/components/)
 
 ### Layout / Generic
@@ -125,6 +131,7 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 - **Pill** — Inline badge/pill (rounded, gray background with ring).
 - **Avatar** — Circular avatar image with optional streak badge (fire=red ring, ice=blue ring + count). Sizes: `'sm'` (h-8) or `'lg'` (h-16). Fallback image for null src.
 - **SeasonNav** — Tab navigation for seasons. Current season (end=null) links to `/`, past seasons to `/season/:id`.
+- **WeeklyCard** — Compact "This Week" highlights card. Shows Most Improved, Rough Week, Most Active tiles + a summary row (match count, player count). Props: `weeklyStats`, `weekLabel`, `weekMatchCount`, `onViewWeekly`. Rendered between Leaderboard and the match creation grid.
 
 ### Match Creation
 
@@ -139,7 +146,7 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 
 ### Statistics
 
-- **Leaderboard** — Sortable table: Rank, Player, Elo, Wins, Losses, Total, Win Rate. Clickable headers toggle sort direction. Links to `/players/:id` (optional via `linkToPlayer` prop). Shows streak indicators.
+- **Leaderboard** — Sortable table with Season / This Week tabs. Season tab: Rank, Player, Elo, Wins, Losses, Total, Win Rate, Last 5. Weekly tab: Rank, Player, Elo Δ (colored), Wins, Losses, Total, Win Rate — only players active that week. Tab state is controlled externally via `activeTab`/`onTabChange`. Props: `players`, `streaks`, `matches`, `linkToPlayer`, `weeklyStats`, `weekLabel`, `activeTab`, `onTabChange`.
 - **EloChart** — Recharts line chart of player Elo progression. Season filter dropdown. Props: `playerId`, `matches`.
 - **HeadToHead** — Two player selectors, shows head-to-head win/loss record (only matches where they opposed each other). Internal `PlayerSelect` sub-component.
 - **PlayerSpotlight** — 2x2 stat grid: On Fire (win streak 2+), On Ice (loss streak 2+), Good Chemistry (best duo, 3+ matches), Bad Chemistry (worst duo, 3+ matches). Uses GameDataContext, DisplayNameContext.

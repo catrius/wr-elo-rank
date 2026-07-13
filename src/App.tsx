@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import Leaderboard from '@/components/Leaderboard.tsx';
 import AvailablePlayers from '@/components/AvailablePlayers.tsx';
 import NewMatch from '@/components/NewMatch.tsx';
@@ -7,19 +8,56 @@ import HeadToHead from '@/components/HeadToHead.tsx';
 import Pairings from '@/components/Pairings.tsx';
 import Section from '@/components/Section.tsx';
 import SeasonNav from '@/components/SeasonNav.tsx';
+import WeeklyCard from '@/components/WeeklyCard.tsx';
 import { GameDataProvider, useGameDataContext } from '@/contexts/GameDataContext.tsx';
 import { TeamsProvider } from '@/contexts/TeamsContext.tsx';
 import { MatchActionsProvider } from '@/contexts/MatchActionsContext.tsx';
+import { getWeekWindow, computeWeeklyStats, countWeekMatches, computeWeeklyChemistry } from '@/utils/weeklyStats.ts';
 
 function AppContent() {
   const { allMatches, matches, players, seasons, streaks } = useGameDataContext();
+  const [leaderboardTab, setLeaderboardTab] = useState<'season' | 'weekly'>('season');
+
+  const weekData = useMemo(() => {
+    if (!allMatches || !players || allMatches.length === 0) return null;
+    const week = getWeekWindow(allMatches);
+    if (!week) return null;
+    const stats = computeWeeklyStats(allMatches, players, week);
+    const matchCount = countWeekMatches(allMatches, week);
+    const chemistry = computeWeeklyChemistry(allMatches, players, week);
+    return { week, stats, matchCount, chemistry };
+  }, [allMatches, players]);
 
   return (
     <>
       <SeasonNav seasons={seasons ?? []} />
 
       {/* Leaderboard */}
-      <Leaderboard players={players} streaks={streaks} matches={allMatches ?? undefined} />
+      <Leaderboard
+        players={players}
+        streaks={streaks}
+        matches={allMatches ?? undefined}
+        weeklyStats={weekData?.stats}
+        weekLabel={weekData?.week.label}
+        activeTab={leaderboardTab}
+        onTabChange={setLeaderboardTab}
+      />
+
+      {/* Weekly highlights card */}
+      {weekData && weekData.stats.length > 0 && (
+        <div className="mt-6">
+          <WeeklyCard
+            weeklyStats={weekData.stats}
+            weekLabel={weekData.week.label}
+            weekMatchCount={weekData.matchCount}
+            chemistry={weekData.chemistry}
+            onViewWeekly={() => {
+              setLeaderboardTab('weekly');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        </div>
+      )}
 
       {/* Input form */}
       <div
