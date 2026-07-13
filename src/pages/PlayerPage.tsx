@@ -88,16 +88,28 @@ export default function PlayerPage() {
           md:p-8
         `}
       >
-        <Link
-          to="/"
-          className={`
-            mb-6 inline-block text-sm text-blue-600
-            hover:underline
-            dark:text-blue-400
-          `}
-        >
-          &larr; Back
-        </Link>
+        <div className="mb-6 flex items-center gap-4">
+          <Link
+            to="/"
+            className={`
+              text-sm text-blue-600
+              hover:underline
+              dark:text-blue-400
+            `}
+          >
+            &larr; Back
+          </Link>
+          <Link
+            to={`/wrapped/${playerId}`}
+            className={`
+              text-sm text-indigo-600
+              hover:underline
+              dark:text-indigo-400
+            `}
+          >
+            Season Wrapped →
+          </Link>
+        </div>
 
         <div className="mb-6 flex items-center gap-4">
           <Avatar src={player.avatar} name={displayName(player)} size="lg" />
