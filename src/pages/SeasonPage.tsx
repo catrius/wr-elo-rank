@@ -123,7 +123,7 @@ export default function SeasonPage() {
 
         <SeasonNav seasons={seasons ?? []} currentId={seasonId} />
 
-        <Leaderboard players={players} streaks={{}} linkToPlayer={false} />
+        <Leaderboard players={players} streaks={{}} matches={matches} linkToPlayer={false} />
 
         <SeasonSpotlight players={players ?? []} matches={matches} prevPlayers={prevPlayers} />
       </div>

@@ -19,7 +19,7 @@ function AppContent() {
       <SeasonNav seasons={seasons ?? []} />
 
       {/* Leaderboard */}
-      <Leaderboard players={players} streaks={streaks} />
+      <Leaderboard players={players} streaks={streaks} matches={allMatches ?? undefined} />
 
       {/* Input form */}
       <div

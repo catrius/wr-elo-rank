@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { orderBy } from 'es-toolkit';
 import { Link } from 'react-router-dom';
-import type { Player } from '@/types/common.ts';
+import type { Player, Match } from '@/types/common.ts';
 import type { Streak } from '@/utils/streaks.ts';
 import Section from '@/components/Section.tsx';
 import Avatar from '@/components/Avatar.tsx';
@@ -14,13 +14,45 @@ function SortIndicator({ sortKey, current }: { sortKey: SortKey; current: { key:
   return current.dir === 'asc' ? <>&#9650;</> : <>&#9660;</>;
 }
 
+const LAST5_KEYS = ['k0', 'k1', 'k2', 'k3', 'k4'] as const;
+
+function Last5({ results }: { results: ('W' | 'L')[] }) {
+  return (
+    <div className="flex items-center justify-end gap-0.5">
+      {results.map((r, i) =>
+        r === 'W' ? (
+          <span
+            key={LAST5_KEYS[i]}
+            className={`
+              flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white
+            `}
+          >
+            ✓
+          </span>
+        ) : (
+          <span
+            key={LAST5_KEYS[i]}
+            className={`
+              flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white
+            `}
+          >
+            ✕
+          </span>
+        ),
+      )}
+    </div>
+  );
+}
+
 export default function Leaderboard({
   players,
   streaks,
+  matches = undefined,
   linkToPlayer = true,
 }: {
   players: Player[] | null;
   streaks: Record<number, Streak>;
+  matches?: Match[];
   linkToPlayer?: boolean;
 }) {
   const { displayName } = useDisplayName();
@@ -62,6 +94,25 @@ export default function Leaderboard({
     return orderBy(players, [iteratee, (p) => displayName(p)], [sort.dir, 'asc']);
   }, [players, sort, displayName]);
 
+  const last5ByPlayer = useMemo(() => {
+    const map = new Map<number, ('W' | 'L')[]>();
+    if (!matches || !players) return map;
+    const completed = matches.filter((m) => m.result === 'A' || m.result === 'B');
+    players.forEach((p) => {
+      const last5: ('W' | 'L')[] = [];
+      completed.some((m) => {
+        const inA = m.team_a_players.includes(p.id);
+        const inB = m.team_b_players.includes(p.id);
+        if (inA || inB) {
+          last5.push((m.result === 'A' && inA) || (m.result === 'B' && inB) ? 'W' : 'L');
+        }
+        return last5.length >= 5;
+      });
+      map.set(p.id, last5.reverse());
+    });
+    return map;
+  }, [matches, players]);
+
   const columns: { key: SortKey; label: string; align: 'left' | 'right' }[] = [
     { key: 'name', label: 'Player', align: 'left' },
     { key: 'elo', label: 'Elo', align: 'right' },
@@ -96,6 +147,7 @@ export default function Leaderboard({
                   </button>
                 </th>
               ))}
+              {matches !== undefined && <th className="px-3 py-2 text-right font-semibold">Last 5</th>}
             </tr>
           </thead>
           <tbody>
@@ -140,6 +192,11 @@ export default function Leaderboard({
                 <td className="px-3 py-2 text-right">{row.total - row.win}</td>
                 <td className="px-3 py-2 text-right">{row.total}</td>
                 <td className="px-3 py-2 text-right">{row.total ? ((row.win / row.total) * 100).toFixed(1) : 0}%</td>
+                {matches !== undefined && (
+                  <td className="px-3 py-2">
+                    <Last5 results={last5ByPlayer.get(row.id) ?? []} />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
