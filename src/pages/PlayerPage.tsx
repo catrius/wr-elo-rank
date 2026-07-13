@@ -5,6 +5,7 @@ import type { Player, Match } from '@/types/common.ts';
 import Avatar from '@/components/Avatar.tsx';
 import EloChart from '@/components/EloChart.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
+import { getWeekWindow, computeWeeklyStats } from '@/utils/weeklyStats.ts';
 
 export default function PlayerPage() {
   const { displayName } = useDisplayName();
@@ -27,6 +28,17 @@ export default function PlayerPage() {
       .or(`team_a_players.cs.{${playerId}},team_b_players.cs.{${playerId}}`);
     if (data) setMatches(data as Match[]);
   }, [playerId]);
+
+  const weeklyStats = useMemo(() => {
+    if (!player || matches.length === 0) return null;
+    const sorted = [...matches]
+      .filter((m) => m.result === 'A' || m.result === 'B')
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    const week = getWeekWindow(sorted);
+    if (!week) return null;
+    const stats = computeWeeklyStats(sorted, [player], week);
+    return { stat: stats[0] ?? null, label: week.label };
+  }, [player, matches]);
 
   const allTimeStats = useMemo(() => {
     const completed = matches.filter((m) => m.result === 'A' || m.result === 'B');
@@ -180,6 +192,88 @@ export default function PlayerPage() {
             </div>
           </div>
         </div>
+
+        {weeklyStats?.stat && (
+          <>
+            <h2
+              className={`
+                mb-4 text-lg font-semibold
+                md:text-xl
+              `}
+            >
+              Weekly
+              <span
+                className={`
+                  ml-2 text-sm font-normal text-gray-400
+                  dark:text-gray-500
+                `}
+              >
+                {weeklyStats.label}
+              </span>
+            </h2>
+            <div
+              className={`
+                mb-6 grid grid-cols-2 gap-4
+                sm:grid-cols-4
+              `}
+            >
+              {[
+                {
+                  label: 'Elo Δ',
+                  value: weeklyStats.stat.eloDelta,
+                  colored: true,
+                },
+                { label: 'Wins', value: weeklyStats.stat.wins },
+                { label: 'Losses', value: weeklyStats.stat.losses },
+                {
+                  label: 'Win Rate',
+                  value: weeklyStats.stat.total
+                    ? `${((weeklyStats.stat.wins / weeklyStats.stat.total) * 100).toFixed(1)}%`
+                    : '0%',
+                },
+              ].map(({ label, value, colored }) => (
+                <div
+                  key={label}
+                  className={`
+                    rounded-lg bg-white p-4 shadow
+                    dark:bg-gray-800
+                  `}
+                >
+                  <div
+                    className={`
+                      text-sm text-gray-500
+                      dark:text-gray-400
+                    `}
+                  >
+                    {label}
+                  </div>
+                  <div
+                    className={`
+                      text-2xl font-bold
+                      ${
+                        colored && typeof value === 'number'
+                          ? value > 0
+                            ? `
+                              text-green-600
+                              dark:text-green-400
+                            `
+                            : value < 0
+                              ? `
+                                text-red-500
+                                dark:text-red-400
+                              `
+                              : ''
+                          : ''
+                      }
+                    `}
+                  >
+                    {colored && typeof value === 'number' && value > 0 ? `+${value}` : value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         <h2
           className={`
