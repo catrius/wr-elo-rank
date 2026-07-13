@@ -122,6 +122,7 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 - `getWeekWindow(matches)` — Finds the Mon–Sun calendar week of the most recent match. Returns `{ startTs, endTs, label }` where label is "This Week · MMM D–MMM D" or "Last Week · …". Returns null if no matches.
 - `computeWeeklyStats(matches, players, week)` — Per-player stats (eloDelta, wins, losses, total) for completed matches within the week window.
 - `countWeekMatches(matches, week)` — Count of completed matches in the week window.
+- `computeWeeklyChemistry(matches, players, week)` — Best and worst duo within the week window (MIN_MATCHES = 2). Returns `{ good: WeeklyDuo | null, bad: WeeklyDuo | null }`.
 
 ## Components (src/components/)
 
@@ -131,7 +132,7 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 - **Pill** — Inline badge/pill (rounded, gray background with ring).
 - **Avatar** — Circular avatar image with optional streak badge (fire=red ring, ice=blue ring + count). Sizes: `'sm'` (h-8) or `'lg'` (h-16). Fallback image for null src.
 - **SeasonNav** — Tab navigation for seasons. Current season (end=null) links to `/`, past seasons to `/season/:id`.
-- **WeeklyCard** — Compact "This Week" highlights card. Shows Most Improved, Rough Week, Most Active tiles + a summary row (match count, player count). Props: `weeklyStats`, `weekLabel`, `weekMatchCount`, `onViewWeekly`. Rendered between Leaderboard and the match creation grid.
+- **WeeklyCard** — Compact "This Week" highlights card. Shows Most Improved, Rough Week, Good Chemistry, Bad Chemistry tiles (2×2 grid) + a summary row (match count, player count). Props: `weeklyStats`, `weekLabel`, `weekMatchCount`, `chemistry`, `onViewWeekly`. Rendered between Leaderboard and the match creation grid.
 
 ### Match Creation
 
@@ -162,7 +163,7 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 
 ### PlayerPage (`/players/:id`)
 
-Fetches player by URL param. Displays avatar, name, current season stats (Elo, Wins, Losses, Win Rate), all-time stats, and EloChart. Uses DisplayNameContext.
+Fetches player by URL param. Displays avatar, name, current season stats (Elo, Wins, Losses, Win Rate), weekly stats (Elo Δ, Wins, Losses, Win Rate — shown only if player was active this/last week), all-time stats, and EloChart. Uses DisplayNameContext.
 
 ### SeasonPage (`/season/:id`)
 
