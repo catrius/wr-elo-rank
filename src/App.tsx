@@ -10,6 +10,7 @@ import Section from '@/components/Section.tsx';
 import SeasonNav from '@/components/SeasonNav.tsx';
 import WeeklyCard from '@/components/WeeklyCard.tsx';
 import CurrentGame from '@/components/CurrentGame.tsx';
+import FeedbackBox from '@/components/FeedbackBox.tsx';
 import { GameDataProvider, useGameDataContext } from '@/contexts/GameDataContext.tsx';
 import { TeamsProvider } from '@/contexts/TeamsContext.tsx';
 import { MatchActionsProvider } from '@/contexts/MatchActionsContext.tsx';
@@ -93,6 +94,7 @@ function AppContent() {
             <Section title="Pairings">
               <Pairings />
             </Section>
+            <FeedbackBox />
           </div>
         )}
 

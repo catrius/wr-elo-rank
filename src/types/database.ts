@@ -8,6 +8,70 @@ export interface Database {
   };
   public: {
     Tables: {
+      feedback: {
+        Row: {
+          created_at: string;
+          id: number;
+          player_id: number | null;
+          status: string;
+          text: string;
+          user_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          id?: number;
+          player_id?: number | null;
+          status?: string;
+          text: string;
+          user_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: number;
+          player_id?: number | null;
+          status?: string;
+          text?: string;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'feedback_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'player';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      feedback_vote: {
+        Row: {
+          created_at: string;
+          feedback_id: number;
+          id: number;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          feedback_id: number;
+          id?: number;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          feedback_id?: number;
+          id?: number;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'feedback_vote_feedback_id_fkey';
+            columns: ['feedback_id'];
+            isOneToOne: true;
+            referencedRelation: 'feedback';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       match: {
         Row: {
           created_at: string;
