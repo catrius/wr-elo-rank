@@ -21,7 +21,8 @@ function AppContent() {
 
   const weekData = useMemo(() => {
     if (!allMatches || !players || allMatches.length === 0) return null;
-    const week = getWeekWindow(allMatches);
+    const completed = allMatches.filter((m) => m.result === 'A' || m.result === 'B');
+    const week = getWeekWindow(completed);
     if (!week) return null;
     const stats = computeWeeklyStats(allMatches, players, week);
     const matchCount = countWeekMatches(allMatches, week);
