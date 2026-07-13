@@ -45,23 +45,7 @@ function AppContent() {
         onTabChange={setLeaderboardTab}
       />
 
-      {/* Weekly highlights card */}
-      {weekData && weekData.stats.length > 0 && (
-        <div className="mt-6">
-          <WeeklyCard
-            weeklyStats={weekData.stats}
-            weekLabel={weekData.week.label}
-            weekMatchCount={weekData.matchCount}
-            chemistry={weekData.chemistry}
-            onViewWeekly={() => {
-              setLeaderboardTab('weekly');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          />
-        </div>
-      )}
-
-      {/* Current in-progress match — desktop: full-width below WeeklyCard */}
+      {/* Current in-progress match — desktop: full-width below Leaderboard */}
       <div
         className={`
           hidden
@@ -90,6 +74,18 @@ function AppContent() {
         {/* Spotlight + Head-to-Head */}
         {allMatches && (
           <div className="flex flex-col gap-6">
+            {weekData && weekData.stats.length > 0 && (
+              <WeeklyCard
+                weeklyStats={weekData.stats}
+                weekLabel={weekData.week.label}
+                weekMatchCount={weekData.matchCount}
+                chemistry={weekData.chemistry}
+                onViewWeekly={() => {
+                  setLeaderboardTab('weekly');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            )}
             <PlayerSpotlight />
             <Section title="Head-to-Head">
               <HeadToHead />

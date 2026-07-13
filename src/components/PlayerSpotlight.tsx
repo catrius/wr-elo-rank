@@ -201,7 +201,7 @@ export default function PlayerSpotlight() {
 
   return (
     <Section
-      title="Player Spotlight"
+      title="Season Spotlight"
       actions={
         <Pill>
           {seasonName ?? 'Current Season'} · {matches.length} matches
