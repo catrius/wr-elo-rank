@@ -9,6 +9,7 @@ import Pairings from '@/components/Pairings.tsx';
 import Section from '@/components/Section.tsx';
 import SeasonNav from '@/components/SeasonNav.tsx';
 import WeeklyCard from '@/components/WeeklyCard.tsx';
+import CurrentGame from '@/components/CurrentGame.tsx';
 import { GameDataProvider, useGameDataContext } from '@/contexts/GameDataContext.tsx';
 import { TeamsProvider } from '@/contexts/TeamsContext.tsx';
 import { MatchActionsProvider } from '@/contexts/MatchActionsContext.tsx';
@@ -59,6 +60,16 @@ function AppContent() {
         </div>
       )}
 
+      {/* Current in-progress match — desktop: full-width below WeeklyCard */}
+      <div
+        className={`
+          hidden
+          md:block
+        `}
+      >
+        <CurrentGame />
+      </div>
+
       {/* Input form */}
       <div
         className={`
@@ -67,6 +78,11 @@ function AppContent() {
         `}
       >
         <AvailablePlayers />
+
+        {/* Current in-progress match — mobile: right above NewMatch */}
+        <div className="md:hidden">
+          <CurrentGame />
+        </div>
 
         <NewMatch />
 

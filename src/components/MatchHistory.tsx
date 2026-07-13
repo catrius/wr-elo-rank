@@ -10,7 +10,7 @@ export default function MatchHistory() {
   const { endMatch, revertMatch, cancelMatch } = useMatchActionsContext();
   return (
     <Section title="Match History">
-      {!matches || matches.length === 0 ? (
+      {!matches || matches.filter((m) => m.result !== null).length === 0 ? (
         <div
           className={`
             text-sm text-gray-600
@@ -21,17 +21,19 @@ export default function MatchHistory() {
         </div>
       ) : (
         <ul className="space-y-4">
-          {matches.map((match) => (
-            <MatchCard
-              key={match.id}
-              match={match}
-              players={players}
-              onEndMatch={endMatch}
-              onRevertMatch={revertMatch}
-              onCancelMatch={cancelMatch}
-              onRematch={lastMatch}
-            />
-          ))}
+          {matches
+            .filter((m) => m.result !== null)
+            .map((match) => (
+              <MatchCard
+                key={match.id}
+                match={match}
+                players={players}
+                onEndMatch={endMatch}
+                onRevertMatch={revertMatch}
+                onCancelMatch={cancelMatch}
+                onRematch={lastMatch}
+              />
+            ))}
         </ul>
       )}
     </Section>
