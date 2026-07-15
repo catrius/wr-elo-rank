@@ -6,6 +6,8 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: () => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -44,14 +46,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error?.message ?? null };
+  }, []);
+
+  const signUp = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({ email, password });
+    return { error: error?.message ?? null };
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, signIn, signOut, refreshUser }),
-    [user, loading, signIn, signOut, refreshUser],
+    () => ({ user, loading, signIn, signInWithPassword, signUp, signOut, refreshUser }),
+    [user, loading, signIn, signInWithPassword, signUp, signOut, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

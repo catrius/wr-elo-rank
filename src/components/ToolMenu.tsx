@@ -10,7 +10,7 @@ export default function ToolMenu() {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { user, signIn } = useAuth();
+  const { user } = useAuth();
   const { displayName, useIngame, toggleIngame } = useDisplayName();
   const { dark, toggleDark } = useDarkMode();
   const [player, setPlayer] = useState<Player | null>(null);
@@ -55,8 +55,7 @@ export default function ToolMenu() {
             type="button"
             onClick={() => {
               setOpen(false);
-              if (user) navigate('/user');
-              else signIn();
+              navigate('/user');
             }}
             className={`
               flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700
