@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import dayjs from 'dayjs';
 import supabase from '@/lib/supabase.ts';
 import { useAuth } from '@/contexts/AuthContext.tsx';
@@ -18,6 +20,47 @@ interface FeedbackItem {
   voteCount: number;
   votedByMe: boolean;
 }
+
+// Compact markdown styling for feedback text — inline-friendly, safe links.
+const markdownComponents: Components = {
+  p: ({ children }) => (
+    <p
+      className={`
+        my-0.5
+        first:mt-0
+        last:mb-0
+      `}
+    >
+      {children}
+    </p>
+  ),
+  a: ({ children, href }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`
+        text-indigo-600 underline
+        dark:text-indigo-400
+      `}
+    >
+      {children}
+    </a>
+  ),
+  ul: ({ children }) => <ul className="my-0.5 list-disc pl-4">{children}</ul>,
+  ol: ({ children }) => <ol className="my-0.5 list-decimal pl-4">{children}</ol>,
+  li: ({ children }) => <li className="my-0">{children}</li>,
+  code: ({ children }) => (
+    <code
+      className={`
+        rounded bg-gray-100 px-1 py-0.5 font-mono text-[0.85em]
+        dark:bg-gray-800
+      `}
+    >
+      {children}
+    </code>
+  ),
+};
 
 export default function FeedbackBox() {
   const { user } = useAuth();
@@ -152,9 +195,9 @@ export default function FeedbackBox() {
                   </button>
 
                   <div className="min-w-0 flex-1">
-                    <p
+                    <div
                       className={`
-                        text-sm
+                        text-sm break-words
                         ${
                           item.status === 'done'
                             ? `
@@ -165,8 +208,10 @@ export default function FeedbackBox() {
                         }
                       `}
                     >
-                      {item.text}
-                    </p>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                        {item.text}
+                      </ReactMarkdown>
+                    </div>
                     <div className="mt-1 flex items-center gap-1.5">
                       {author && <Avatar src={author.avatar ?? null} name={author.name} />}
                       <span
