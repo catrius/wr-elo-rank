@@ -66,7 +66,7 @@ export interface Database {
           {
             foreignKeyName: 'feedback_vote_feedback_id_fkey';
             columns: ['feedback_id'];
-            isOneToOne: true;
+            isOneToOne: false;
             referencedRelation: 'feedback';
             referencedColumns: ['id'];
           },
@@ -150,6 +150,7 @@ export interface Database {
           created_at: string;
           elo: number;
           email: string | null;
+          hidden: boolean;
           id: number;
           ingame: string | null;
           name: string;
@@ -161,6 +162,7 @@ export interface Database {
           created_at?: string;
           elo?: number;
           email?: string | null;
+          hidden?: boolean;
           id?: number;
           ingame?: string | null;
           name?: string;
@@ -172,6 +174,7 @@ export interface Database {
           created_at?: string;
           elo?: number;
           email?: string | null;
+          hidden?: boolean;
           id?: number;
           ingame?: string | null;
           name?: string;

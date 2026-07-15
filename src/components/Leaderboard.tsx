@@ -8,6 +8,8 @@ import Section from '@/components/Section.tsx';
 import Avatar from '@/components/Avatar.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 
+const INITIAL_ELO = 1500;
+
 type SortKey = 'name' | 'elo' | 'win' | 'losses' | 'total' | 'winrate';
 type WeeklySortKey = 'name' | 'eloDelta' | 'wins' | 'losses' | 'total' | 'winrate';
 type TabType = 'season' | 'weekly';
@@ -71,6 +73,74 @@ function EloDeltaCell({ delta }: { delta: number }) {
       </span>
     );
   return <span className="text-gray-400">±0</span>;
+}
+
+function SeasonRow({
+  row,
+  rank,
+  stripeIndex,
+  linkToPlayer,
+  displayName,
+  streaks,
+  matches = undefined,
+  last5,
+}: {
+  row: Player;
+  rank: number | null;
+  stripeIndex: number;
+  linkToPlayer: boolean;
+  displayName: (p: Player) => string;
+  streaks: Record<number, Streak>;
+  matches?: Match[];
+  last5: ('W' | 'L')[];
+}) {
+  return (
+    <tr
+      className={
+        stripeIndex % 2
+          ? `
+            bg-white
+            dark:bg-gray-900
+          `
+          : `
+            bg-gray-50
+            dark:bg-gray-950
+          `
+      }
+    >
+      <td className="px-3 py-2">{rank ?? '—'}</td>
+      <td className="min-w-40 px-3 py-2">
+        {linkToPlayer ? (
+          <Link
+            to={`/players/${row.id}`}
+            className={`
+              inline-flex items-center gap-2 text-indigo-600
+              hover:underline
+              dark:text-indigo-400
+            `}
+          >
+            <Avatar src={row.avatar} name={displayName(row)} streak={streaks[row.id]} />
+            {displayName(row)}
+          </Link>
+        ) : (
+          <span className="inline-flex items-center gap-2">
+            <Avatar src={row.avatar} name={displayName(row)} streak={streaks[row.id]} />
+            {displayName(row)}
+          </span>
+        )}
+      </td>
+      <td className="px-3 py-2 text-right">{row.elo}</td>
+      <td className="px-3 py-2 text-right">{row.win}</td>
+      <td className="px-3 py-2 text-right">{row.total - row.win}</td>
+      <td className="px-3 py-2 text-right">{row.total}</td>
+      <td className="px-3 py-2 text-right">{row.total ? ((row.win / row.total) * 100).toFixed(1) : 0}%</td>
+      {matches !== undefined && (
+        <td className="px-3 py-2">
+          <Last5 results={last5} />
+        </td>
+      )}
+    </tr>
+  );
 }
 
 export default function Leaderboard({
@@ -137,7 +207,11 @@ export default function Leaderboard({
       }
     };
     // Second key 'name' for stable/pleasant ordering on ties
-    return orderBy(players, [iteratee, (p) => displayName(p)], [sort.dir, 'asc']);
+    return orderBy(
+      players.filter((p) => !p.hidden),
+      [iteratee, (p) => displayName(p)],
+      [sort.dir, 'asc'],
+    );
   }, [players, sort, displayName]);
 
   const sortedWeeklyStats = useMemo(() => {
@@ -160,7 +234,11 @@ export default function Leaderboard({
           return 0;
       }
     };
-    return orderBy(weeklyStats, [iteratee, (s) => displayName(s.player)], [weeklySort.dir, 'asc']);
+    return orderBy(
+      weeklyStats.filter((s) => !s.player.hidden),
+      [iteratee, (s) => displayName(s.player)],
+      [weeklySort.dir, 'asc'],
+    );
   }, [weeklyStats, weeklySort, displayName]);
 
   const last5ByPlayer = useMemo(() => {
@@ -182,7 +260,14 @@ export default function Leaderboard({
     return map;
   }, [matches, players]);
 
+  // Three groups: above the initial Elo, at/below it (but played), and unranked (no games yet).
+  const abovePlayers = useMemo(() => sortedPlayers.filter((p) => p.total > 0 && p.elo > INITIAL_ELO), [sortedPlayers]);
+  const belowPlayers = useMemo(() => sortedPlayers.filter((p) => p.total > 0 && p.elo <= INITIAL_ELO), [sortedPlayers]);
+  const unrankedPlayers = useMemo(() => sortedPlayers.filter((p) => p.total === 0), [sortedPlayers]);
+
   const hasWeeklyTab = weeklyStats && weeklyStats.length > 0;
+
+  const seasonColSpan = 1 + 6 + (matches !== undefined ? 1 : 0);
 
   const seasonColumns: { key: SortKey; label: string; align: 'left' | 'right' }[] = [
     { key: 'name', label: 'Player', align: 'left' },
@@ -374,54 +459,101 @@ export default function Leaderboard({
               </tr>
             </thead>
             <tbody>
-              {sortedPlayers?.map((row, i) => (
-                <tr
+              {abovePlayers.map((row, i) => (
+                <SeasonRow
                   key={row.id}
-                  className={
-                    i % 2
-                      ? `
-                        bg-white
-                        dark:bg-gray-900
-                      `
-                      : `
-                        bg-gray-50
-                        dark:bg-gray-950
-                      `
-                  }
-                >
-                  <td className="px-3 py-2">{i + 1}</td>
-                  <td className="min-w-40 px-3 py-2">
-                    {linkToPlayer ? (
-                      <Link
-                        to={`/players/${row.id}`}
+                  row={row}
+                  rank={i + 1}
+                  stripeIndex={i}
+                  linkToPlayer={linkToPlayer}
+                  displayName={displayName}
+                  streaks={streaks}
+                  matches={matches}
+                  last5={last5ByPlayer.get(row.id) ?? []}
+                />
+              ))}
+              {belowPlayers.length > 0 && (
+                <>
+                  <tr>
+                    <td colSpan={seasonColSpan} className="px-3 py-1">
+                      <div
                         className={`
-                          inline-flex items-center gap-2 text-indigo-600
-                          hover:underline
-                          dark:text-indigo-400
+                          flex items-center gap-3 text-xs font-medium text-gray-400
+                          dark:text-gray-500
                         `}
                       >
-                        <Avatar src={row.avatar} name={displayName(row)} streak={streaks[row.id]} />
-                        {displayName(row)}
-                      </Link>
-                    ) : (
-                      <span className="inline-flex items-center gap-2">
-                        <Avatar src={row.avatar} name={displayName(row)} streak={streaks[row.id]} />
-                        {displayName(row)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-right">{row.elo}</td>
-                  <td className="px-3 py-2 text-right">{row.win}</td>
-                  <td className="px-3 py-2 text-right">{row.total - row.win}</td>
-                  <td className="px-3 py-2 text-right">{row.total}</td>
-                  <td className="px-3 py-2 text-right">{row.total ? ((row.win / row.total) * 100).toFixed(1) : 0}%</td>
-                  {matches !== undefined && (
-                    <td className="px-3 py-2">
-                      <Last5 results={last5ByPlayer.get(row.id) ?? []} />
+                        <span
+                          className={`
+                            h-px flex-1 bg-gray-200
+                            dark:bg-gray-700
+                          `}
+                        />
+                        Baseline · {INITIAL_ELO}
+                        <span
+                          className={`
+                            h-px flex-1 bg-gray-200
+                            dark:bg-gray-700
+                          `}
+                        />
+                      </div>
                     </td>
-                  )}
-                </tr>
-              ))}
+                  </tr>
+                  {belowPlayers.map((row, i) => (
+                    <SeasonRow
+                      key={row.id}
+                      row={row}
+                      rank={abovePlayers.length + i + 1}
+                      stripeIndex={abovePlayers.length + i}
+                      linkToPlayer={linkToPlayer}
+                      displayName={displayName}
+                      streaks={streaks}
+                      matches={matches}
+                      last5={last5ByPlayer.get(row.id) ?? []}
+                    />
+                  ))}
+                </>
+              )}
+              {unrankedPlayers.length > 0 && (
+                <>
+                  <tr>
+                    <td colSpan={seasonColSpan} className="px-3 py-1">
+                      <div
+                        className={`
+                          flex items-center gap-3 text-xs font-medium tracking-wide text-gray-400 uppercase
+                          dark:text-gray-500
+                        `}
+                      >
+                        <span
+                          className={`
+                            h-px flex-1 bg-gray-200
+                            dark:bg-gray-700
+                          `}
+                        />
+                        Unranked
+                        <span
+                          className={`
+                            h-px flex-1 bg-gray-200
+                            dark:bg-gray-700
+                          `}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                  {unrankedPlayers.map((row, i) => (
+                    <SeasonRow
+                      key={row.id}
+                      row={row}
+                      rank={null}
+                      stripeIndex={abovePlayers.length + belowPlayers.length + i}
+                      linkToPlayer={linkToPlayer}
+                      displayName={displayName}
+                      streaks={streaks}
+                      matches={matches}
+                      last5={last5ByPlayer.get(row.id) ?? []}
+                    />
+                  ))}
+                </>
+              )}
             </tbody>
           </table>
         </div>
