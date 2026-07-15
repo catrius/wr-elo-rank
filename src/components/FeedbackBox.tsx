@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import supabase from '@/lib/supabase.ts';
 import { useAuth } from '@/contexts/AuthContext.tsx';
@@ -19,7 +20,8 @@ interface FeedbackItem {
 }
 
 export default function FeedbackBox() {
-  const { user, signIn } = useAuth();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const { players } = useGameDataContext();
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [text, setText] = useState('');
@@ -266,7 +268,7 @@ export default function FeedbackBox() {
           >
             <button
               type="button"
-              onClick={signIn}
+              onClick={() => navigate('/user')}
               className={`
                 cursor-pointer underline
                 hover:text-gray-600
