@@ -18,7 +18,9 @@ export default function useMatchActions(players: Player[] | null, refresh: () =>
         .update({ result, team_a_new_elos: teamANewElos, team_b_new_elos: teamBNewElos })
         .eq('id', match.id);
 
-      await supabase.from('player').upsert([...updatedAPlayers, ...updatedBPlayers]);
+      await supabase
+        .from('player')
+        .upsert([...updatedAPlayers, ...updatedBPlayers].map((p) => ({ ...p, is_decaying: false })));
 
       refresh();
     },

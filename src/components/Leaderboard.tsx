@@ -532,7 +532,7 @@ export default function Leaderboard({
                             dark:bg-gray-700
                           `}
                         />
-                        Baseline · {INITIAL_ELO}
+                        BASELINE · {INITIAL_ELO}
                         <span
                           className={`
                             h-px flex-1 bg-gray-200
