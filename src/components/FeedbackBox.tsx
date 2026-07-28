@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Pagination from 'rc-pagination';
 import dayjs from 'dayjs';
 import supabase from '@/lib/supabase.ts';
 import { useAuth } from '@/contexts/AuthContext.tsx';
@@ -9,6 +10,8 @@ import { useGameDataContext } from '@/contexts/GameDataContext.tsx';
 import Section from '@/components/Section.tsx';
 import Avatar from '@/components/Avatar.tsx';
 import type { Player } from '@/types/common.ts';
+
+const PAGE_SIZE = 10;
 
 interface FeedbackItem {
   id: number;
@@ -71,6 +74,8 @@ export default function FeedbackBox() {
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
+  const [page, setPage] = useState(1);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const playerMap = useMemo<Record<number, Player>>(() => {
     const map: Record<number, Player> = {};
@@ -84,6 +89,26 @@ export default function FeedbackBox() {
     () => (user && players ? (players.find((p) => p.email === user.email)?.id ?? null) : null),
     [user, players],
   );
+
+  const pagedItems = useMemo(() => items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [items, page]);
+
+  const handlePageChange = useCallback((next: number) => {
+    setPage(next);
+    // Scroll to the top of the whole Feedback card (title included) with a little space above,
+    // deferred past the re-render so the page's new height is settled before the smooth scroll.
+    requestAnimationFrame(() => {
+      const section = listRef.current?.closest('section');
+      if (!section) return;
+      const top = section.getBoundingClientRect().top + window.scrollY - 16;
+      window.scrollTo({ top, behavior: 'smooth' });
+    });
+  }, []);
+
+  // Snap back to a valid page if the item count shrinks below the current page's range.
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+    if (page > maxPage) setPage(maxPage);
+  }, [items.length, page]);
 
   const load = useCallback(async () => {
     const [{ data: feedback }, { data: votes }] = await Promise.all([
@@ -169,7 +194,7 @@ export default function FeedbackBox() {
 
   return (
     <Section title="Feedback">
-      <div className="flex flex-col gap-3">
+      <div ref={listRef} className="flex flex-col gap-3">
         {items.length === 0 ? (
           <p
             className={`
@@ -181,7 +206,7 @@ export default function FeedbackBox() {
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {items.map((item) => {
+            {pagedItems.map((item) => {
               const author = item.player_id ? playerMap[item.player_id] : null;
               const isMine = !!user && item.user_id === user.id;
               const isEditing = editingId === item.id;
@@ -368,6 +393,16 @@ export default function FeedbackBox() {
               );
             })}
           </ul>
+        )}
+
+        {items.length > PAGE_SIZE && (
+          <Pagination
+            className="self-center"
+            current={page}
+            total={items.length}
+            pageSize={PAGE_SIZE}
+            onChange={handlePageChange}
+          />
         )}
 
         {user ? (

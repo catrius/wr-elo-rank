@@ -95,10 +95,17 @@ function DuoTile({ label, duo }: { label: string; duo: WeeklyDuo }) {
         <Avatar src={duo.playerA.avatar} name={displayName(duo.playerA)} />
         <Avatar src={duo.playerB.avatar} name={displayName(duo.playerB)} />
       </div>
-      <span className="text-sm font-semibold">
-        {displayName(duo.playerA)}
-        <br />
-        {displayName(duo.playerB)}
+      <span className="text-sm leading-tight font-semibold">
+        <span className="block">{displayName(duo.playerA)}</span>
+        <span
+          className={`
+            block text-xs font-normal text-gray-400
+            dark:text-gray-500
+          `}
+        >
+          &
+        </span>
+        <span className="block">{displayName(duo.playerB)}</span>
       </span>
       <span
         className={`

@@ -126,7 +126,17 @@ function DuoList({ duos, displayName }: { duos: DuoStat[]; displayName: (player:
           <Avatar src={duo.playerB.avatar} name={displayName(duo.playerB)} />
           <span className="min-w-0 leading-tight">
             <span className="block truncate">{displayName(duo.playerA)}</span>
-            <span className="block truncate">{displayName(duo.playerB)}</span>
+            <span className="block truncate">
+              <span
+                className={`
+                  text-gray-400
+                  dark:text-gray-500
+                `}
+              >
+                &
+              </span>{' '}
+              {displayName(duo.playerB)}
+            </span>
           </span>
           <span
             className={`

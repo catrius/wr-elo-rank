@@ -231,15 +231,22 @@ export default function PlayerSpotlight() {
                 <Avatar src={stat.player2.avatar} name={displayName(stat.player2)} streak={streaks[stat.player2.id]} />
               )}
             </div>
-            <span className="text-sm font-semibold">
-              {displayName(stat.player)}
+            <span className="text-sm leading-tight font-semibold">
               {stat.player2 ? (
                 <>
-                  <br />
-                  {displayName(stat.player2)}
+                  <span className="block">{displayName(stat.player)}</span>
+                  <span
+                    className={`
+                      block text-xs font-normal text-gray-400
+                      dark:text-gray-500
+                    `}
+                  >
+                    &
+                  </span>
+                  <span className="block">{displayName(stat.player2)}</span>
                 </>
               ) : (
-                ''
+                displayName(stat.player)
               )}
             </span>
             <span

@@ -32,7 +32,7 @@ export function getWeekWindow(matches: Match[]): WeekWindow | null {
   const thisWeekMonday = today.subtract(todayDaysToMonday, 'day').startOf('day');
   const isCurrentWeek = monday.format('YYYY-MM-DD') === thisWeekMonday.format('YYYY-MM-DD');
 
-  const rangeLabel = `${monday.format('MMM D')}–${sunday.format('MMM D')}`;
+  const rangeLabel = `${monday.format('MMM D')} – ${sunday.format('MMM D')}`;
   const label = isCurrentWeek ? `This Week · ${rangeLabel}` : `Last Week · ${rangeLabel}`;
 
   return { startTs: monday.valueOf(), endTs: sunday.valueOf(), label };
