@@ -42,7 +42,7 @@ export default function useGameData() {
 
   const matches = useMemo(() => allMatches?.slice(0, 10) ?? null, [allMatches]);
 
-  const streaks = useMemo(() => (allMatches ? computeStreaks(allMatches) : {}), [allMatches]);
+  const streaks = useMemo(() => (allMatches ? computeStreaks([...allMatches].reverse()) : {}), [allMatches]);
 
   const refresh = useCallback(() => {
     getPlayers();
