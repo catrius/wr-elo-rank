@@ -153,6 +153,7 @@ export interface Database {
           hidden: boolean;
           id: number;
           ingame: string | null;
+          isAdmin: boolean;
           name: string;
           total: number;
           win: number;
@@ -165,6 +166,7 @@ export interface Database {
           hidden?: boolean;
           id?: number;
           ingame?: string | null;
+          isAdmin?: boolean;
           name?: string;
           total?: number;
           win?: number;
@@ -177,6 +179,7 @@ export interface Database {
           hidden?: boolean;
           id?: number;
           ingame?: string | null;
+          isAdmin?: boolean;
           name?: string;
           total?: number;
           win?: number;
