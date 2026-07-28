@@ -156,7 +156,17 @@ export default function WrappedPage() {
           const pid = Number(rawId);
           const raw = playerMap.get(pid);
           if (!raw) return [];
-          const p: Player = { ...raw, elo: 0, win: 0, total: 0, email: null, created_at: '', hidden: false };
+          const p: Player = {
+            ...raw,
+            elo: 0,
+            win: 0,
+            total: 0,
+            email: null,
+            created_at: '',
+            hidden: false,
+            isAdmin: false,
+            is_decaying: false,
+          };
           const w = wins[pid] ?? 0;
           return [{ player: p, wins: w, total, rate: w / total }];
         });

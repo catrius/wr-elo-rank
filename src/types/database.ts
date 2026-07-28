@@ -153,6 +153,7 @@ export interface Database {
           hidden: boolean;
           id: number;
           ingame: string | null;
+          is_decaying: boolean;
           isAdmin: boolean;
           name: string;
           total: number;
@@ -166,6 +167,7 @@ export interface Database {
           hidden?: boolean;
           id?: number;
           ingame?: string | null;
+          is_decaying?: boolean;
           isAdmin?: boolean;
           name?: string;
           total?: number;
@@ -179,6 +181,7 @@ export interface Database {
           hidden?: boolean;
           id?: number;
           ingame?: string | null;
+          is_decaying?: boolean;
           isAdmin?: boolean;
           name?: string;
           total?: number;
