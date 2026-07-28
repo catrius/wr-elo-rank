@@ -39,9 +39,18 @@ function TeamEloList({
         const player = find(players, { id });
         return (
           <li key={id} className="flex items-center gap-2">
-            {newElo && elo && <span className={diff >= 0 ? 'text-green-700' : 'text-red-700'}>{diffStr}</span>}
+            {newElo && elo && (
+              <span
+                className={`
+                  w-8 text-right
+                  ${diff >= 0 ? 'text-green-700' : 'text-red-700'}
+                `}
+              >
+                {diffStr}
+              </span>
+            )}
             <Avatar src={player?.avatar ?? null} name={player ? displayName(player) : ''} />
-            <span>{player ? displayName(player) : ''}</span>
+            <span className="min-w-0 flex-1 truncate">{player ? displayName(player) : ''}</span>
           </li>
         );
       })}
@@ -118,7 +127,7 @@ export default function MatchCard({ match, players, onEndMatch, onRevertMatch, o
           md:grid-cols-[1fr_auto_1fr]
         `}
       >
-        <div>
+        <div className="min-w-0">
           <div className="mb-1 font-medium">Team A</div>
           <TeamEloList
             playerIds={match.team_a_players}
@@ -154,7 +163,7 @@ export default function MatchCard({ match, players, onEndMatch, onRevertMatch, o
             dark:bg-gray-700
           `}
         />
-        <div>
+        <div className="min-w-0">
           <div className="mb-1 font-medium">Team B</div>
           <TeamEloList
             playerIds={match.team_b_players}

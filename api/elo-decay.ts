@@ -1,7 +1,37 @@
 import { createClient } from '@supabase/supabase-js';
+import dayjs from 'dayjs';
 import type { IncomingMessage, ServerResponse } from 'http';
-import type { Database } from '../src/types/database.ts';
-import { findDecayPlayers } from '../src/utils/eloDecay.ts';
+
+type Player = { id: number; name: string; elo: number; is_decaying: boolean };
+type Match = { created_at: string; result: string | null; team_a_players: number[]; team_b_players: number[] };
+
+function weekStart(d: dayjs.Dayjs): dayjs.Dayjs {
+  const dow = d.day();
+  const daysToMonday = dow === 0 ? 6 : dow - 1;
+  return d.subtract(daysToMonday, 'day').startOf('day');
+}
+
+function findDecayPlayers(players: Player[], matches: Match[]) {
+  const thisWeekMonday = weekStart(dayjs());
+
+  const lastPlayedMs = new Map<number, number>();
+  matches
+    .filter((m) => m.result === 'A' || m.result === 'B')
+    .forEach((m) => {
+      const ts = new Date(m.created_at).getTime();
+      [...m.team_a_players, ...m.team_b_players].forEach((pid) => {
+        if (ts > (lastPlayedMs.get(pid) ?? 0)) lastPlayedMs.set(pid, ts);
+      });
+    });
+
+  return players.flatMap((player) => {
+    const lastTs = lastPlayedMs.get(player.id);
+    if (!lastTs) return [];
+    const weeksInactive = thisWeekMonday.diff(weekStart(dayjs(lastTs)), 'week');
+    if (weeksInactive < 2) return [];
+    return [{ player, weeksInactive }];
+  });
+}
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   if (req.method !== 'GET') {
@@ -17,14 +47,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return;
   }
 
-  const supabase = createClient<Database>(
+  const supabase = createClient(
     process.env.VITE_PUBLIC__SUPABASE_URL!,
     process.env.VITE_PUBLIC__SUPABASE_SERVICE_ROLE_KEY!,
   );
 
   const [{ data: players, error: playersErr }, { data: matches, error: matchesErr }] = await Promise.all([
-    supabase.from('player').select('*').eq('hidden', false),
-    supabase.from('match').select('*').in('result', ['A', 'B']),
+    supabase.from('player').select('id, name, elo, is_decaying').eq('hidden', false),
+    supabase.from('match').select('created_at, result, team_a_players, team_b_players').in('result', ['A', 'B']),
   ]);
 
   if (playersErr || matchesErr) {
@@ -33,11 +63,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return;
   }
 
-  const decaying = findDecayPlayers(players ?? [], matches ?? []);
+  const decaying = findDecayPlayers((players ?? []) as Player[], (matches ?? []) as Match[]);
   const decayingIds = new Set(decaying.map((d) => d.player.id));
 
-  // Players coming back from inactivity — clear their flag
-  const recovering = (players ?? []).filter((p) => p.is_decaying && !decayingIds.has(p.id));
+  const recovering = (players ?? []).filter((p) => (p as Player).is_decaying && !decayingIds.has((p as Player).id));
 
   await Promise.all([
     ...decaying.map(({ player }) =>
@@ -47,7 +76,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         .eq('id', player.id),
     ),
     ...recovering.map((p) =>
-      supabase.from('player').update({ is_decaying: false }).eq('id', p.id),
+      supabase.from('player').update({ is_decaying: false }).eq('id', (p as Player).id),
     ),
   ]);
 
@@ -55,7 +84,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   res.end(
     JSON.stringify({
       decayed: decaying.map((d) => ({ id: d.player.id, name: d.player.name, weeksInactive: d.weeksInactive })),
-      recovered: recovering.map((p) => ({ id: p.id, name: p.name })),
+      recovered: recovering.map((p) => ({ id: (p as Player).id, name: (p as Player).name })),
     }),
   );
 }
