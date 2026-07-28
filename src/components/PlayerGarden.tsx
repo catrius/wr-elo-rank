@@ -488,6 +488,81 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
           >
             debug
           </div>
+          {/* Weather formula breakdown */}
+          <div
+            className={`
+              mb-2 grid grid-cols-2 gap-x-4 gap-y-0.5 rounded bg-orange-100/60 px-2 py-1.5 font-mono text-[11px]
+              dark:bg-orange-900/20
+            `}
+          >
+            <span
+              className={`
+                text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              streak
+            </span>
+            <span
+              className={`
+                text-gray-700
+                dark:text-gray-200
+              `}
+            >
+              {computed.breakdown.streakValue > 0 ? '+' : ''}
+              {computed.breakdown.streakValue} → score {computed.breakdown.streakScore.toFixed(1)} ×35%
+            </span>
+            <span
+              className={`
+                text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              last 5
+            </span>
+            <span
+              className={`
+                text-gray-700
+                dark:text-gray-200
+              `}
+            >
+              {computed.breakdown.recentWins}/{computed.breakdown.recentTotal} →{' '}
+              {computed.breakdown.recentForm.toFixed(1)} ×40%
+            </span>
+            <span
+              className={`
+                text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              win rate
+            </span>
+            <span
+              className={`
+                text-gray-700
+                dark:text-gray-200
+              `}
+            >
+              {computed.breakdown.winRate.toFixed(1)} ×25%
+            </span>
+            <span
+              className={`
+                text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              health
+            </span>
+            <span
+              className={`
+                font-semibold text-orange-700
+                dark:text-orange-300
+              `}
+            >
+              {computed.breakdown.healthScore.toFixed(1)} → {WEATHER_EMOJI[computed.weather]} {computed.weather}
+            </span>
+          </div>
+
           <div
             className={`
               flex flex-col gap-2

@@ -10,9 +10,7 @@ export interface Streak {
 export function computeStreaks(matches: Match[]): Record<number, Streak> {
   const finished = matches.filter((m) => m.result === 'A' || m.result === 'B');
 
-  const winFrozen: Record<number, boolean> = {};
   const winStreaks: Record<number, number> = {};
-  const lossFrozen: Record<number, boolean> = {};
   const lossStreaks: Record<number, number> = {};
 
   finished.forEach((m) => {
@@ -20,17 +18,12 @@ export function computeStreaks(matches: Match[]): Record<number, Streak> {
     const losers = m.result === 'A' ? m.team_b_players : m.team_a_players;
 
     winners.forEach((id) => {
-      if (!winFrozen[id]) winStreaks[id] = (winStreaks[id] || 0) + 1;
+      winStreaks[id] = (winStreaks[id] ?? 0) + 1;
+      lossStreaks[id] = 0;
     });
     losers.forEach((id) => {
-      winFrozen[id] = true;
-    });
-
-    losers.forEach((id) => {
-      if (!lossFrozen[id]) lossStreaks[id] = (lossStreaks[id] || 0) + 1;
-    });
-    winners.forEach((id) => {
-      lossFrozen[id] = true;
+      lossStreaks[id] = (lossStreaks[id] ?? 0) + 1;
+      winStreaks[id] = 0;
     });
   });
 

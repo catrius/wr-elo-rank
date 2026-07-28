@@ -4,9 +4,20 @@ import { computeStreaks, type Streak } from '@/utils/streaks.ts';
 export type GardenStage = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type WeatherState = 'sunny' | 'cloudy' | 'rainy' | 'stormy' | 'blizzard';
 
+export interface WeatherBreakdown {
+  streakValue: number;
+  streakScore: number;
+  recentWins: number;
+  recentTotal: number;
+  recentForm: number;
+  winRate: number;
+  healthScore: number;
+}
+
 export interface GardenState {
   stage: GardenStage;
   weather: WeatherState;
+  breakdown: WeatherBreakdown;
 }
 
 // Calibrated from 2026S1 + 2026S2 win distributions (29 player-seasons combined)
@@ -35,7 +46,7 @@ export function getWeatherState(
   playerId: number,
   seasonWins: number,
   seasonTotal: number,
-): WeatherState {
+): { weather: WeatherState; breakdown: WeatherBreakdown } {
   const streakValue = streak ? (streak.type === 'fire' ? streak.count : -streak.count) : 0;
   const streakScore = 50 + clamp(streakValue * 10, -50, 50);
 
@@ -50,11 +61,25 @@ export function getWeatherState(
 
   const healthScore = streakScore * 0.35 + recentForm * 0.4 + winRate * 0.25;
 
-  if (healthScore >= 80) return 'sunny';
-  if (healthScore >= 60) return 'cloudy';
-  if (healthScore >= 40) return 'rainy';
-  if (healthScore >= 20) return 'stormy';
-  return 'blizzard';
+  let weather: WeatherState;
+  if (healthScore >= 80) weather = 'sunny';
+  else if (healthScore >= 60) weather = 'cloudy';
+  else if (healthScore >= 40) weather = 'rainy';
+  else if (healthScore >= 20) weather = 'stormy';
+  else weather = 'blizzard';
+
+  return {
+    weather,
+    breakdown: {
+      streakValue,
+      streakScore,
+      recentWins,
+      recentTotal: recentCompleted.length,
+      recentForm,
+      winRate,
+      healthScore,
+    },
+  };
 }
 
 export function computeGardenState(player: Player, matches: Match[], playerId: number): GardenState {
@@ -65,8 +90,6 @@ export function computeGardenState(player: Player, matches: Match[], playerId: n
   const streaks = computeStreaks([...completed].reverse());
   const streak = streaks[playerId] ?? null;
 
-  return {
-    stage: getGrowthStage(player.win),
-    weather: getWeatherState(streak, completed, playerId, player.win, player.total),
-  };
+  const { weather, breakdown } = getWeatherState(streak, completed, playerId, player.win, player.total);
+  return { stage: getGrowthStage(player.win), weather, breakdown };
 }
