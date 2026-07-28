@@ -156,7 +156,7 @@ export default function WrappedPage() {
           const pid = Number(rawId);
           const raw = playerMap.get(pid);
           if (!raw) return [];
-          const p: Player = { ...raw, elo: 0, win: 0, total: 0, email: null, created_at: '' };
+          const p: Player = { ...raw, elo: 0, win: 0, total: 0, email: null, created_at: '', hidden: false };
           const w = wins[pid] ?? 0;
           return [{ player: p, wins: w, total, rate: w / total }];
         });
@@ -170,7 +170,7 @@ export default function WrappedPage() {
           const raw = playerMap.get(Number(topFacedEntry[0]));
           if (!raw) return null;
           return {
-            player: { ...raw, elo: 0, win: 0, total: 0, email: null, created_at: '' } as Player,
+            player: { ...raw, elo: 0, win: 0, total: 0, email: null, created_at: '', hidden: false } as Player,
             count: topFacedEntry[1],
           };
         })()
@@ -197,7 +197,7 @@ export default function WrappedPage() {
           const raw = playerMap.get(Number(topEntry[0]));
           if (!raw) return null;
           return {
-            player: { ...raw, elo: 0, win: 0, total: 0, email: null, created_at: '' } as Player,
+            player: { ...raw, elo: 0, win: 0, total: 0, email: null, created_at: '', hidden: false } as Player,
             count: topEntry[1],
           };
         })()
