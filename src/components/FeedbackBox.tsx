@@ -69,6 +69,8 @@ export default function FeedbackBox() {
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editText, setEditText] = useState('');
 
   const playerMap = useMemo<Record<number, Player>>(() => {
     const map: Record<number, Player> = {};
@@ -144,6 +146,27 @@ export default function FeedbackBox() {
     [user, load],
   );
 
+  const startEdit = useCallback((item: FeedbackItem) => {
+    setEditingId(item.id);
+    setEditText(item.text);
+  }, []);
+
+  const cancelEdit = useCallback(() => {
+    setEditingId(null);
+    setEditText('');
+  }, []);
+
+  const saveEdit = useCallback(
+    async (item: FeedbackItem) => {
+      if (!user || !editText.trim()) return;
+      await supabase.from('feedback').update({ text: editText.trim() }).eq('id', item.id).eq('user_id', user.id);
+      setEditingId(null);
+      setEditText('');
+      await load();
+    },
+    [user, editText, load],
+  );
+
   return (
     <Section title="Feedback">
       <div className="flex flex-col gap-3">
@@ -160,6 +183,8 @@ export default function FeedbackBox() {
           <ul className="flex flex-col gap-2">
             {items.map((item) => {
               const author = item.player_id ? playerMap[item.player_id] : null;
+              const isMine = !!user && item.user_id === user.id;
+              const isEditing = editingId === item.id;
               return (
                 <li
                   key={item.id}
@@ -195,23 +220,64 @@ export default function FeedbackBox() {
                   </button>
 
                   <div className="min-w-0 flex-1">
-                    <div
-                      className={`
-                        text-sm break-words
-                        ${
-                          item.status === 'done'
-                            ? `
-                              text-gray-400 line-through
-                              dark:text-gray-500
-                            `
-                            : ''
-                        }
-                      `}
-                    >
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                        {item.text}
-                      </ReactMarkdown>
-                    </div>
+                    {isEditing ? (
+                      <div className="flex flex-col gap-2">
+                        <textarea
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          rows={2}
+                          className={`
+                            w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm
+                            placeholder:text-gray-300
+                            dark:border-gray-700 dark:bg-gray-800 dark:placeholder:text-gray-600
+                          `}
+                        />
+                        <div className="flex items-center gap-2 self-end">
+                          <button
+                            type="button"
+                            onClick={cancelEdit}
+                            className={`
+                              cursor-pointer rounded px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors
+                              hover:bg-gray-100
+                              dark:text-gray-400 dark:hover:bg-gray-800
+                            `}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => saveEdit(item)}
+                            disabled={!editText.trim()}
+                            className={`
+                              cursor-pointer rounded px-3 py-1.5 text-xs font-medium text-indigo-600 transition-colors
+                              hover:bg-indigo-50
+                              disabled:cursor-not-allowed disabled:opacity-50
+                              dark:text-indigo-400 dark:hover:bg-indigo-950
+                            `}
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className={`
+                          text-sm break-words
+                          ${
+                            item.status === 'done'
+                              ? `
+                                text-gray-400 line-through
+                                dark:text-gray-500
+                              `
+                              : ''
+                          }
+                        `}
+                      >
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                          {item.text}
+                        </ReactMarkdown>
+                      </div>
+                    )}
                     <div className="mt-1 flex items-center gap-1.5">
                       {author && <Avatar src={author.avatar ?? null} name={author.name} />}
                       <span
@@ -235,13 +301,40 @@ export default function FeedbackBox() {
                     </div>
                   </div>
 
-                  {user && (
+                  {isMine && !isEditing && (
+                    <button
+                      type="button"
+                      onClick={() => startEdit(item)}
+                      aria-label="Edit feedback"
+                      className={`
+                        shrink-0 cursor-pointer rounded p-1 text-gray-300 transition-colors
+                        hover:bg-gray-100 hover:text-gray-500
+                        dark:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-400
+                      `}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                      </svg>
+                    </button>
+                  )}
+
+                  {user && !isEditing && (
                     <button
                       type="button"
                       onClick={() => toggleStatus(item)}
                       aria-label={item.status === 'done' ? 'Mark as open' : 'Mark as done'}
                       className={`
-                        shrink-0 rounded p-1 transition-colors
+                        shrink-0 cursor-pointer rounded p-1 transition-colors
                         ${
                           item.status === 'done'
                             ? `
