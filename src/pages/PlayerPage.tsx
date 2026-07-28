@@ -4,15 +4,19 @@ import supabase from '@/lib/supabase.ts';
 import type { Player, Match } from '@/types/common.ts';
 import Avatar from '@/components/Avatar.tsx';
 import EloChart from '@/components/EloChart.tsx';
+import PlayerGarden from '@/components/PlayerGarden.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
+import { useAuth } from '@/contexts/AuthContext.tsx';
 import { getWeekWindow, computeWeeklyStats } from '@/utils/weeklyStats.ts';
 
 export default function PlayerPage() {
   const { displayName } = useDisplayName();
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const playerId = Number(id);
   const [player, setPlayer] = useState<Player | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchPlayer = useCallback(async () => {
     const { data } = await supabase.from('player').select().eq('id', playerId).single();
@@ -54,6 +58,16 @@ export default function PlayerPage() {
     fetchPlayer();
     fetchMatches();
   }, [fetchPlayer, fetchMatches]);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    supabase
+      .from('player')
+      .select('isAdmin')
+      .eq('email', user.email)
+      .single()
+      .then(({ data }) => setIsAdmin(data?.isAdmin ?? false));
+  }, [user?.email]);
 
   if (!player) {
     return (
@@ -121,6 +135,10 @@ export default function PlayerPage() {
           >
             {displayName(player)}
           </h1>
+        </div>
+
+        <div className="mb-6">
+          <PlayerGarden player={player} matches={matches} playerId={playerId} isAdmin={isAdmin} />
         </div>
 
         <h2

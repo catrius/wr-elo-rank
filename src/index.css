@@ -10,6 +10,58 @@
 }
 @import "rc-pagination/assets/index.css";
 
+/* rc-pagination dark mode overrides */
+.dark .rc-pagination-item {
+  background-color: theme(--color-gray-800);
+  border-color: theme(--color-gray-600);
+}
+.dark .rc-pagination-item a {
+  color: theme(--color-gray-200);
+}
+.dark .rc-pagination-item:hover,
+.dark .rc-pagination-item:focus {
+  border-color: theme(--color-blue-400);
+}
+.dark .rc-pagination-item:hover a,
+.dark .rc-pagination-item:focus a {
+  color: theme(--color-blue-400);
+}
+.dark .rc-pagination-item-active {
+  background-color: theme(--color-gray-800);
+  border-color: theme(--color-blue-400);
+}
+.dark .rc-pagination-item-active a {
+  color: theme(--color-blue-400);
+}
+.dark .rc-pagination-prev .rc-pagination-item-link,
+.dark .rc-pagination-next .rc-pagination-item-link {
+  background-color: theme(--color-gray-800);
+  border-color: theme(--color-gray-600);
+  color: theme(--color-gray-200);
+}
+.dark .rc-pagination-prev:hover .rc-pagination-item-link,
+.dark .rc-pagination-next:hover .rc-pagination-item-link,
+.dark .rc-pagination-prev:focus .rc-pagination-item-link,
+.dark .rc-pagination-next:focus .rc-pagination-item-link {
+  color: theme(--color-blue-400);
+  border-color: theme(--color-blue-400);
+}
+.dark .rc-pagination-prev button,
+.dark .rc-pagination-next button {
+  color: theme(--color-gray-200);
+}
+.dark .rc-pagination-jump-prev button,
+.dark .rc-pagination-jump-next button {
+  color: theme(--color-gray-400);
+}
+.dark .rc-pagination-disabled .rc-pagination-item-link,
+.dark .rc-pagination-disabled:hover .rc-pagination-item-link,
+.dark .rc-pagination-disabled:focus .rc-pagination-item-link {
+  color: theme(--color-gray-600);
+  background-color: theme(--color-gray-800);
+  border-color: theme(--color-gray-700);
+}
+
 html {
   background-color: theme(--color-gray-50);
 }
