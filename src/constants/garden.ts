@@ -50,7 +50,7 @@ export const SKY_IMAGE: Record<WeatherState, 'day' | 'night'> = {
 export const STAGE_HEIGHTS: Record<GardenStage, number> = {
   1: 36,
   2: 44,
-  3: 44,
+  3: 52,
   4: 80,
   5: 120,
   6: 150,
