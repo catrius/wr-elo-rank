@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Player, Match } from '@/types/common.ts';
 import { computeGardenState, type GardenStage, type WeatherState } from '@/utils/garden.ts';
 
@@ -195,38 +195,93 @@ function SunRays() {
   );
 }
 
+interface Cloud {
+  top: number;
+  left?: string;
+  right?: string;
+  w: number;
+  h: number;
+  anim: string;
+  puffs: string[];
+}
+
 function Clouds({ dark = false }: { dark?: boolean }) {
-  const color = dark ? 'rgba(71,85,105,0.7)' : 'rgba(203,213,225,0.85)';
+  // Soft, slightly cool off-white on day skies; muted slate on stormy night skies
+  const color = dark ? 'rgba(100,116,139,0.8)' : 'rgba(236,242,248,0.8)';
+  // A fuller cloud field. Each cloud is an ellipse plus several box-shadow "puffs" for a lumpy silhouette.
+  // The first cloud (top-left, cloud-drift-1) is the one Lightning syncs to — keep it first.
+  const clouds: Cloud[] = [
+    {
+      top: 16,
+      left: '10%',
+      w: 96,
+      h: 30,
+      anim: 'cloud-drift-1 6s',
+      puffs: ['24px -16px 0 4px', '-22px -8px 0 0', '50px -4px 0 -2px', '2px -22px 0 -2px'],
+    },
+    {
+      top: 28,
+      right: '8%',
+      w: 76,
+      h: 25,
+      anim: 'cloud-drift-2 7s',
+      puffs: ['18px -13px 0 3px', '-18px -6px 0 0', '36px -3px 0 -3px'],
+    },
+    {
+      top: 60,
+      left: '32%',
+      w: 88,
+      h: 27,
+      anim: 'cloud-drift-2 9s',
+      puffs: ['22px -15px 0 4px', '-22px -7px 0 0', '44px -4px 0 -2px', '-4px -20px 0 -3px'],
+    },
+    {
+      top: 8,
+      left: '48%',
+      w: 62,
+      h: 21,
+      anim: 'cloud-drift-1 8s',
+      puffs: ['14px -11px 0 2px', '-14px -4px 0 0', '28px -2px 0 -3px'],
+    },
+    {
+      top: 72,
+      right: '24%',
+      w: 72,
+      h: 23,
+      anim: 'cloud-drift-1 7.5s',
+      puffs: ['16px -12px 0 3px', '-16px -5px 0 0', '32px -3px 0 -3px'],
+    },
+    {
+      top: 42,
+      right: '42%',
+      w: 54,
+      h: 19,
+      anim: 'cloud-drift-2 8.5s',
+      puffs: ['13px -9px 0 2px', '-12px -4px 0 0', '24px -2px 0 -3px'],
+    },
+  ];
   return (
     <>
       <style>{`
         @keyframes cloud-drift-1 { 0% { transform: translateX(-10px); } 100% { transform: translateX(10px); } }
         @keyframes cloud-drift-2 { 0% { transform: translateX(8px); } 100% { transform: translateX(-8px); } }
       `}</style>
-      <div
-        className="absolute rounded-full"
-        style={{
-          top: 14,
-          left: '15%',
-          width: 60,
-          height: 22,
-          background: color,
-          animation: 'cloud-drift-1 6s ease-in-out infinite alternate',
-          boxShadow: `12px -8px 0 4px ${color}, -10px -4px 0 2px ${color}`,
-        }}
-      />
-      <div
-        className="absolute rounded-full"
-        style={{
-          top: 22,
-          right: '12%',
-          width: 44,
-          height: 16,
-          background: color,
-          animation: 'cloud-drift-2 7s ease-in-out infinite alternate',
-          boxShadow: `10px -6px 0 3px ${color}`,
-        }}
-      />
+      {clouds.map((c) => (
+        <div
+          key={`${c.top}-${c.left ?? c.right}`}
+          className="absolute rounded-full"
+          style={{
+            top: c.top,
+            left: c.left,
+            right: c.right,
+            width: c.w,
+            height: c.h,
+            background: color,
+            animation: `${c.anim} ease-in-out infinite alternate`,
+            boxShadow: c.puffs.map((p) => `${p} ${color}`).join(', '),
+          }}
+        />
+      ))}
     </>
   );
 }
@@ -294,6 +349,55 @@ function Blizzard() {
   );
 }
 
+// Multiple bolts, each drifting under a cloud and flashing on its own staggered rhythm. The first is synced to
+// the top-left cloud (cloud-drift-1) as before; negative delays desynchronize the rest so strikes come often.
+const LIGHTNING_BOLTS: {
+  left: string;
+  top: number;
+  scale: number;
+  drift: string;
+  dur: string;
+  delay: string;
+  points: string;
+}[] = [
+  {
+    left: '18%',
+    top: 32,
+    scale: 1,
+    drift: 'cloud-drift-1 6s',
+    dur: '3.5s',
+    delay: '0s',
+    points: '14,0 6,18 12,18 4,40',
+  },
+  {
+    left: '60%',
+    top: 40,
+    scale: 0.8,
+    drift: 'cloud-drift-2 7s',
+    dur: '4.2s',
+    delay: '-1.6s',
+    points: '12,0 5,16 11,16 3,36',
+  },
+  {
+    left: '82%',
+    top: 28,
+    scale: 0.65,
+    drift: 'cloud-drift-1 8s',
+    dur: '5s',
+    delay: '-3.1s',
+    points: '13,0 6,15 12,15 5,34',
+  },
+  {
+    left: '38%',
+    top: 70,
+    scale: 0.7,
+    drift: 'cloud-drift-2 8.5s',
+    dur: '4.7s',
+    delay: '-2.3s',
+    points: '12,0 5,17 11,17 4,38',
+  },
+];
+
 function Lightning() {
   return (
     <>
@@ -306,26 +410,44 @@ function Lightning() {
           50% { opacity: 1; }
           55% { opacity: 0; }
         }
+        @keyframes sky-flash {
+          0%, 40%, 100% { opacity: 0; }
+          44% { opacity: 0.28; }
+          48% { opacity: 0.06; }
+          52% { opacity: 0.22; }
+          58% { opacity: 0; }
+        }
       `}</style>
-      {/* Bolt drifts in sync with the first cloud (cloud-drift-1) and flashes intermittently */}
+      {/* Ambient full-frame flash lighting up the sky, timed with the lead bolt */}
       <div
-        className="absolute"
+        className="absolute inset-0"
         style={{
-          top: 32,
-          left: '18%',
-          animation: 'bolt-drift 6s ease-in-out infinite alternate, lightning-flash 3.5s ease-out infinite',
+          background: 'rgba(255,255,255,1)',
+          animation: 'sky-flash 3.5s ease-out infinite',
+          pointerEvents: 'none',
         }}
-      >
-        <svg width="20" height="40" viewBox="0 0 20 40" style={{ filter: 'drop-shadow(0 0 5px rgba(253,224,71,0.9))' }}>
-          <polyline
-            points="14,0 6,18 12,18 4,40"
-            fill="none"
-            stroke="#fde047"
-            strokeWidth="2.5"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </div>
+      />
+      {LIGHTNING_BOLTS.map((b) => (
+        <div
+          key={b.left}
+          className="absolute"
+          style={{
+            top: b.top,
+            left: b.left,
+            animation: `${b.drift} ease-in-out infinite alternate, lightning-flash ${b.dur} ease-out infinite`,
+            animationDelay: `0s, ${b.delay}`,
+          }}
+        >
+          <svg
+            width={20 * b.scale}
+            height={40 * b.scale}
+            viewBox="0 0 20 40"
+            style={{ filter: 'drop-shadow(0 0 5px rgba(253,224,71,0.9))' }}
+          >
+            <polyline points={b.points} fill="none" stroke="#fde047" strokeWidth="2.5" strokeLinejoin="round" />
+          </svg>
+        </div>
+      ))}
     </>
   );
 }
@@ -349,11 +471,140 @@ const WEATHER_ROWS: { weather: WeatherState; score: string; description: string 
   { weather: 'blizzard', score: '0–19', description: 'Frozen solid — brutal form' },
 ];
 
+// Fixed design size the garden scene is laid out at (3:2). Everything inside is authored against these
+// dimensions, then a single transform scales the whole stage to whatever width the card renders at.
+const DESIGN_W = 480;
+const DESIGN_H = 320;
+
+// Tailwind-styled dropdown replacing the native <select> in the debug panel — native popups misposition
+// inside transformed ancestors and can't be themed; this is a plain menu with click-outside to close.
+interface DebugOption {
+  value: string;
+  label: string;
+}
+
+function DebugSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: DebugOption[];
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const handleClickOutside = useCallback((e: MouseEvent) => {
+    if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (open) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open, handleClickOutside]);
+
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <label
+      className={`
+        flex flex-1 items-center gap-2 text-gray-600
+        dark:text-gray-300
+      `}
+    >
+      <span className="w-16 shrink-0">{label}</span>
+      <div ref={ref} className="relative flex-1">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className={`
+            flex w-full cursor-pointer items-center justify-between gap-2 rounded border border-gray-300 bg-white px-1.5
+            py-1 text-left
+            dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100
+          `}
+        >
+          <span className="truncate">{selected?.label}</span>
+          <svg
+            className={`
+              h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform
+              ${open ? 'rotate-180' : ''}
+            `}
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fillRule="evenodd"
+              d={
+                'M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04' +
+                'l-4.25 4.38a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z'
+              }
+              clipRule="evenodd"
+            />
+          </svg>
+        </button>
+        {open && (
+          <div
+            className={`
+              absolute left-0 z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1
+              shadow-lg
+              dark:border-gray-700 dark:bg-gray-800
+            `}
+          >
+            {options.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => {
+                  onChange(o.value);
+                  setOpen(false);
+                }}
+                className={`
+                  block w-full cursor-pointer px-3 py-1.5 text-left
+                  hover:bg-gray-100
+                  dark:hover:bg-gray-700
+                  ${
+                    o.value === value
+                      ? `
+                        font-semibold text-gray-900
+                        dark:text-gray-100
+                      `
+                      : `
+                        text-gray-700
+                        dark:text-gray-300
+                      `
+                  }
+                `}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </label>
+  );
+}
+
 export default function PlayerGarden({ player, matches, playerId, isAdmin = false }: Props) {
   const computed = useMemo(() => computeGardenState(player, matches, playerId), [player, matches, playerId]);
   const [showInfo, setShowInfo] = useState(false);
   const [debugStage, setDebugStage] = useState<GardenStage | null>(null);
   const [debugWeather, setDebugWeather] = useState<WeatherState | null>(null);
+
+  // Measure the rendered card width and derive a uniform scale factor for the whole scene
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return undefined;
+    const ro = new ResizeObserver(([entry]) => setScale(entry.contentRect.width / DESIGN_W));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const stage = debugStage ?? computed.stage;
   const weather = debugWeather ?? computed.weather;
@@ -367,87 +618,101 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
   return (
     <div className="flex flex-col items-center">
       <div
+        ref={containerRef}
         className="relative overflow-hidden rounded-2xl"
-        style={{ width: '100%', maxWidth: 480, aspectRatio: '3 / 2' }}
+        style={{ width: '100%', maxWidth: DESIGN_W, aspectRatio: '3 / 2' }}
       >
-        {/* Sky — day/night painted background chosen by weather, with a translucent weather tint on top */}
+        {/* Fixed-size stage scaled as one unit so every layer grows/shrinks together with the card */}
         <div
-          className="absolute inset-0"
           style={{
-            backgroundImage: `linear-gradient(${tintColor}${tint}, ${tintColor}${tint}), url(/garden/sky_${
-              isNight ? 'night' : 'day'
-            }.webp)`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: DESIGN_W,
+            height: DESIGN_H,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
           }}
-        />
-
-        {/* Weather overlays */}
-        {weather === 'sunny' && <SunRays />}
-        {(weather === 'cloudy' || weather === 'stormy') && <Clouds dark={weather === 'stormy'} />}
-        {weather === 'rainy' && <RainDrops />}
-        {weather === 'stormy' && (
-          <>
-            <RainDrops heavy />
-            <Lightning />
-          </>
-        )}
-        {weather === 'blizzard' && <Blizzard />}
-
-        {/* Ground — grass/dirt tile used directly, tiled horizontally at 2× pixel scale */}
-        <div
-          className="absolute inset-x-0 bottom-0"
-          style={{
-            height: 48,
-            backgroundImage: 'url(/garden/ground.png)',
-            backgroundRepeat: 'repeat-x',
-            backgroundPosition: 'top left',
-            backgroundSize: '48px 48px',
-            imageRendering: 'pixelated',
-            borderRadius: '0 0 16px 16px',
-          }}
-        />
-
-        {/* Shadow cast on the grass at the base of the trunk */}
-        <div
-          className="absolute"
-          style={{
-            bottom: 36,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: SHADOW_WIDTHS[stage],
-            height: 11,
-            background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.38), rgba(0,0,0,0) 70%)',
-            borderRadius: '50%',
-            pointerEvents: 'none',
-          }}
-        />
-
-        {/* Tree — baseline sunk into the grass so it reads as planted */}
-        <div
-          className="absolute inset-x-0"
-          style={{ bottom: 40, top: 8, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
         >
-          <style>{`
-            @keyframes tree-sway {
-              0% { transform: rotate(-2deg); }
-              100% { transform: rotate(2deg); }
-            }
-          `}</style>
-          <img
-            src={`/garden/stage${stage === 2 ? 3 : stage}.png`}
-            alt={STAGE_NAMES[stage]}
+          {/* Sky — day/night painted background chosen by weather, with a translucent weather tint on top */}
+          <div
+            className="absolute inset-0"
             style={{
-              height: STAGE_HEIGHTS[stage],
-              width: 'auto',
-              imageRendering: 'pixelated',
-              animation: `tree-sway ${swayDur} ease-in-out infinite alternate`,
-              transformOrigin: 'bottom center',
+              backgroundImage: `linear-gradient(${tintColor}${tint}, ${tintColor}${tint}), url(/garden/sky_${
+                isNight ? 'night' : 'day'
+              }.webp)`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
             }}
           />
+
+          {/* Weather overlays */}
+          {weather === 'sunny' && <SunRays />}
+          {(weather === 'cloudy' || weather === 'stormy') && <Clouds dark={weather === 'stormy'} />}
+          {weather === 'rainy' && <RainDrops />}
+          {weather === 'stormy' && (
+            <>
+              <RainDrops heavy />
+              <Lightning />
+            </>
+          )}
+          {weather === 'blizzard' && <Blizzard />}
+
+          {/* Ground — grass/dirt tile used directly, tiled horizontally at 2× pixel scale */}
+          <div
+            className="absolute inset-x-0 bottom-0"
+            style={{
+              height: 48,
+              backgroundImage: 'url(/garden/ground.png)',
+              backgroundRepeat: 'repeat-x',
+              backgroundPosition: 'top left',
+              backgroundSize: '48px 48px',
+              imageRendering: 'pixelated',
+              borderRadius: '0 0 16px 16px',
+            }}
+          />
+
+          {/* Shadow cast on the grass at the base of the trunk */}
+          <div
+            className="absolute"
+            style={{
+              bottom: 36,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: SHADOW_WIDTHS[stage],
+              height: 11,
+              background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.38), rgba(0,0,0,0) 70%)',
+              borderRadius: '50%',
+              pointerEvents: 'none',
+            }}
+          />
+
+          {/* Tree — baseline sunk into the grass so it reads as planted */}
+          <div
+            className="absolute inset-x-0"
+            style={{ bottom: 40, top: 8, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          >
+            <style>{`
+              @keyframes tree-sway {
+                0% { transform: rotate(-2deg); }
+                100% { transform: rotate(2deg); }
+              }
+            `}</style>
+            <img
+              src={`/garden/stage${stage === 2 ? 3 : stage}.png`}
+              alt={STAGE_NAMES[stage]}
+              style={{
+                height: STAGE_HEIGHTS[stage],
+                width: 'auto',
+                imageRendering: 'pixelated',
+                animation: `tree-sway ${swayDur} ease-in-out infinite alternate`,
+                transformOrigin: 'bottom center',
+              }}
+            />
+          </div>
         </div>
 
-        {/* Stage · weather badge — overlay, top-left */}
+        {/* Stage · weather badge — overlay, top-left (kept at fixed size, outside the scaled stage) */}
         <div
           className={`
             absolute top-2 left-2 z-10 flex items-center gap-1 rounded-full bg-black/35 px-2.5 py-1 text-xs font-medium
@@ -457,7 +722,7 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
           {STAGE_NAMES[stage]} · {WEATHER_EMOJI[weather]}
         </div>
 
-        {/* Info toggle — overlay, top-right */}
+        {/* Info toggle — overlay, top-right (kept at fixed size, outside the scaled stage) */}
         <button
           onClick={() => setShowInfo((v) => !v)}
           className={`
@@ -569,52 +834,30 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
               sm:flex-row sm:gap-4
             `}
           >
-            <label
-              className={`
-                flex flex-1 items-center gap-2 text-gray-600
-                dark:text-gray-300
-              `}
-            >
-              <span className="w-16 shrink-0">Stage</span>
-              <select
-                value={debugStage ?? ''}
-                onChange={(e) => setDebugStage(e.target.value ? (Number(e.target.value) as GardenStage) : null)}
-                className={`
-                  flex-1 rounded border border-gray-300 bg-white px-1.5 py-1
-                  dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100
-                `}
-              >
-                <option value="">auto ({computed.stage})</option>
-                {([1, 2, 3, 4, 5, 6, 7, 8] as GardenStage[]).map((s) => (
-                  <option key={s} value={s}>
-                    {s} — {STAGE_NAMES[s]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label
-              className={`
-                flex flex-1 items-center gap-2 text-gray-600
-                dark:text-gray-300
-              `}
-            >
-              <span className="w-16 shrink-0">Weather</span>
-              <select
-                value={debugWeather ?? ''}
-                onChange={(e) => setDebugWeather((e.target.value as WeatherState) || null)}
-                className={`
-                  flex-1 rounded border border-gray-300 bg-white px-1.5 py-1
-                  dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100
-                `}
-              >
-                <option value="">auto ({computed.weather})</option>
-                {(['sunny', 'cloudy', 'rainy', 'stormy', 'blizzard'] as WeatherState[]).map((w) => (
-                  <option key={w} value={w}>
-                    {WEATHER_EMOJI[w]} {w}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <DebugSelect
+              label="Stage"
+              value={debugStage != null ? String(debugStage) : ''}
+              onChange={(v) => setDebugStage(v ? (Number(v) as GardenStage) : null)}
+              options={[
+                { value: '', label: `auto (${computed.stage})` },
+                ...([1, 2, 3, 4, 5, 6, 7, 8] as GardenStage[]).map((s) => ({
+                  value: String(s),
+                  label: `${s} — ${STAGE_NAMES[s]}`,
+                })),
+              ]}
+            />
+            <DebugSelect
+              label="Weather"
+              value={debugWeather ?? ''}
+              onChange={(v) => setDebugWeather((v as WeatherState) || null)}
+              options={[
+                { value: '', label: `auto (${computed.weather})` },
+                ...(['sunny', 'cloudy', 'rainy', 'stormy', 'blizzard'] as WeatherState[]).map((w) => ({
+                  value: w,
+                  label: `${WEATHER_EMOJI[w]} ${w}`,
+                })),
+              ]}
+            />
           </div>
         </div>
       )}
