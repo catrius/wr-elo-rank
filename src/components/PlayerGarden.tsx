@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Player, Match } from '@/types/common.ts';
 import { computeGardenState, type GardenStage, type WeatherState } from '@/utils/garden.ts';
 import {
@@ -54,7 +54,35 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
   const isNight = SKY_IMAGE[weather] === 'night';
   const tintColor = isNight ? skyDark : skyLight;
   const tint = WEATHER_TINT[weather];
-  const swayDur = `${(SWAY_DURATION[stage] * WEATHER_SWAY_MULT[weather]).toFixed(1)}s`;
+
+  // Drive the tree's sway in JS so it never exactly repeats: sum several sine waves at
+  // incommensurate frequencies with random phases (re-rolled on each stage/weather change).
+  const treeRef = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const el = treeRef.current;
+    if (!el) return undefined;
+    // Base wave period (seconds) — slower for young stages, faster in lively weather
+    const period = SWAY_DURATION[stage] * WEATHER_SWAY_MULT[weather];
+    const w = (2 * Math.PI) / period;
+    const phase = Array.from({ length: 4 }, () => Math.random() * Math.PI * 2);
+    let raf = 0;
+    let start = 0;
+    const tick = (now: number) => {
+      if (!start) start = now;
+      const t = (now - start) / 1000;
+      // Lean: three layered waves; their peaks rarely align, so the motion wanders organically
+      const rot =
+        3 * Math.sin(w * t + phase[0]) +
+        1.4 * Math.sin(w * 2.3 * t + phase[1]) +
+        0.8 * Math.sin(w * 0.6 * t + phase[2]);
+      // Canopy trails the lean slightly — bend rather than rigid rock
+      const skew = -1.4 * Math.sin(w * t + phase[0] + 0.5) + 0.7 * Math.sin(w * 1.7 * t + phase[3]);
+      el.style.transform = `rotate(${rot.toFixed(2)}deg) skewX(${skew.toFixed(2)}deg)`;
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [stage, weather]);
 
   return (
     <div className="flex flex-col items-center">
@@ -133,21 +161,16 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
             className="absolute inset-x-0"
             style={{ bottom: 40, top: 8, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
           >
-            <style>{`
-              @keyframes tree-sway {
-                0% { transform: rotate(-2deg); }
-                100% { transform: rotate(2deg); }
-              }
-            `}</style>
             <img
+              ref={treeRef}
               src={`/garden/stage${stage === 2 ? 3 : stage}.png`}
               alt={STAGE_NAMES[stage]}
               style={{
                 height: STAGE_HEIGHTS[stage],
                 width: 'auto',
                 imageRendering: 'pixelated',
-                animation: `tree-sway ${swayDur} ease-in-out infinite alternate`,
                 transformOrigin: 'bottom center',
+                willChange: 'transform',
               }}
             />
           </div>
