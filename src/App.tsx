@@ -78,7 +78,6 @@ function AppContent() {
             {weekData && weekData.stats.length > 0 && (
               <WeeklyCard
                 weeklyStats={weekData.stats}
-                weekLabel={weekData.week.label}
                 weekMatchCount={weekData.matchCount}
                 chemistry={weekData.chemistry}
                 onViewWeekly={() => {

@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { orderBy } from 'es-toolkit';
 import Section from '@/components/Section.tsx';
 import Avatar from '@/components/Avatar.tsx';
-import Pill from '@/components/Pill.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 import type { PlayerWeekStats, WeeklyDuo } from '@/utils/weeklyStats.ts';
 
@@ -121,13 +120,11 @@ function DuoTile({ label, duo }: { label: string; duo: WeeklyDuo }) {
 
 export default function WeeklyCard({
   weeklyStats,
-  weekLabel,
   weekMatchCount,
   chemistry,
   onViewWeekly,
 }: {
   weeklyStats: PlayerWeekStats[];
-  weekLabel: string;
   weekMatchCount: number;
   chemistry: { good: WeeklyDuo | null; bad: WeeklyDuo | null };
   onViewWeekly: () => void;
@@ -153,20 +150,17 @@ export default function WeeklyCard({
     <Section
       title="Weekly Spotlight"
       actions={
-        <div className="flex items-center gap-3">
-          <Pill>{weekLabel}</Pill>
-          <button
-            type="button"
-            onClick={onViewWeekly}
-            className={`
-              text-xs text-indigo-600
-              hover:underline
-              dark:text-indigo-400
-            `}
-          >
-            Full rankings →
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onViewWeekly}
+          className={`
+            cursor-pointer rounded-lg bg-indigo-600 px-3 py-1 text-xs font-medium text-white transition-colors
+            hover:bg-indigo-700
+            dark:bg-indigo-500 dark:hover:bg-indigo-400
+          `}
+        >
+          Full rankings →
+        </button>
       }
     >
       <div className="grid grid-cols-2 gap-3">

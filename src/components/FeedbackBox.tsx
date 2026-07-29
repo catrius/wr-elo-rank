@@ -218,6 +218,56 @@ export default function FeedbackBox() {
   return (
     <Section title="Feedback">
       <div ref={listRef} className="flex flex-col gap-3">
+        {user ? (
+          <div className="flex flex-col gap-2">
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Suggest a feature or leave feedback..."
+              rows={2}
+              className={`
+                w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm
+                placeholder:text-gray-300
+                dark:border-gray-700 dark:bg-gray-800 dark:placeholder:text-gray-600
+              `}
+            />
+            <button
+              type="button"
+              onClick={submit}
+              disabled={!text.trim() || submitting}
+              className={`
+                cursor-pointer self-end rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white
+                transition-colors
+                hover:bg-indigo-700
+                disabled:cursor-not-allowed disabled:opacity-50
+                dark:bg-indigo-500 dark:hover:bg-indigo-400
+              `}
+            >
+              Submit
+            </button>
+          </div>
+        ) : (
+          <p
+            className={`
+              text-center text-xs text-gray-400
+              dark:text-gray-500
+            `}
+          >
+            <button
+              type="button"
+              onClick={() => navigate('/user')}
+              className={`
+                cursor-pointer underline
+                hover:text-gray-600
+                dark:hover:text-gray-300
+              `}
+            >
+              Sign in
+            </button>{' '}
+            to suggest features or vote
+          </p>
+        )}
+
         <div className="flex gap-1.5">
           {(['all', 'open', 'joke', 'done'] as const).map((f) => (
             <button
@@ -244,6 +294,7 @@ export default function FeedbackBox() {
             </button>
           ))}
         </div>
+
         {filteredItems.length === 0 ? (
           <p
             className={`
@@ -480,55 +531,6 @@ export default function FeedbackBox() {
             pageSize={PAGE_SIZE}
             onChange={handlePageChange}
           />
-        )}
-
-        {user ? (
-          <div className="flex flex-col gap-2">
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Suggest a feature or leave feedback..."
-              rows={2}
-              className={`
-                w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm
-                placeholder:text-gray-300
-                dark:border-gray-700 dark:bg-gray-800 dark:placeholder:text-gray-600
-              `}
-            />
-            <button
-              type="button"
-              onClick={submit}
-              disabled={!text.trim() || submitting}
-              className={`
-                cursor-pointer self-end rounded px-3 py-1.5 text-xs font-medium text-indigo-600 transition-colors
-                hover:bg-indigo-50
-                disabled:cursor-not-allowed disabled:opacity-50
-                dark:text-indigo-400 dark:hover:bg-indigo-950
-              `}
-            >
-              Submit
-            </button>
-          </div>
-        ) : (
-          <p
-            className={`
-              text-center text-xs text-gray-400
-              dark:text-gray-500
-            `}
-          >
-            <button
-              type="button"
-              onClick={() => navigate('/user')}
-              className={`
-                cursor-pointer underline
-                hover:text-gray-600
-                dark:hover:text-gray-300
-              `}
-            >
-              Sign in
-            </button>{' '}
-            to suggest features or vote
-          </p>
         )}
       </div>
     </Section>

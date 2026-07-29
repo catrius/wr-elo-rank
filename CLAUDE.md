@@ -132,7 +132,7 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 - **Pill** — Inline badge/pill (rounded, gray background with ring).
 - **Avatar** — Circular avatar image with optional streak badge (fire=red ring, ice=blue ring + count). Sizes: `'sm'` (h-8) or `'lg'` (h-16). Fallback image for null src.
 - **SeasonNav** — Tab navigation for seasons. Current season (end=null) links to `/`, past seasons to `/season/:id`.
-- **WeeklyCard** — Compact "This Week" highlights card. Shows Most Improved, Rough Week, Good Chemistry, Bad Chemistry tiles (2×2 grid) + a summary row (match count, player count). Props: `weeklyStats`, `weekLabel`, `weekMatchCount`, `chemistry`, `onViewWeekly`. Rendered between Leaderboard and the match creation grid.
+- **WeeklyCard** — Compact "This Week" highlights card. Shows Most Improved, Rough Week, Good Chemistry, Bad Chemistry tiles (2×2 grid) + a summary row (match count, player count). Props: `weeklyStats`, `weekMatchCount`, `chemistry`, `onViewWeekly`. Rendered between Leaderboard and the match creation grid.
 
 ### Match Creation
 

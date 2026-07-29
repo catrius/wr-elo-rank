@@ -192,9 +192,10 @@ export default function Pairings() {
                         type="button"
                         onClick={() => startEdit(pairing)}
                         className={`
-                          cursor-pointer rounded px-2 py-1 text-xs text-gray-500 transition-colors
-                          hover:bg-gray-100 hover:text-gray-700
-                          dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200
+                          cursor-pointer rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700
+                          transition-colors
+                          hover:bg-gray-200
+                          dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700
                         `}
                       >
                         Edit
@@ -203,9 +204,10 @@ export default function Pairings() {
                         type="button"
                         onClick={() => deletePairing(pairing.id)}
                         className={`
-                          cursor-pointer rounded px-2 py-1 text-xs text-red-500 transition-colors
-                          hover:bg-red-50 hover:text-red-700
-                          dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300
+                          cursor-pointer rounded-lg bg-red-600 px-3 py-1 text-xs font-medium text-white
+                          transition-colors
+                          hover:bg-red-700
+                          dark:bg-red-500 dark:hover:bg-red-400
                         `}
                       >
                         Delete
