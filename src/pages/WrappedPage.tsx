@@ -271,7 +271,7 @@ export default function WrappedPage() {
     >
       <div
         className={`
-          mx-auto max-w-3xl p-4
+          mx-auto max-w-6xl p-4
           md:p-8
         `}
       >
