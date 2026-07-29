@@ -6,6 +6,7 @@ import Pagination from 'rc-pagination';
 import dayjs from 'dayjs';
 import supabase from '@/lib/supabase.ts';
 import { useAuth } from '@/contexts/AuthContext.tsx';
+import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 import { useGameDataContext } from '@/contexts/GameDataContext.tsx';
 import Section from '@/components/Section.tsx';
 import Avatar from '@/components/Avatar.tsx';
@@ -69,6 +70,7 @@ export default function FeedbackBox() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { players } = useGameDataContext();
+  const { displayName } = useDisplayName();
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -375,14 +377,14 @@ export default function FeedbackBox() {
 
                   {/* Footer: author left, vote + edit/admin actions right, so they never eat content width. */}
                   <div className="flex items-center gap-1.5">
-                    {author && <Avatar src={author.avatar ?? null} name={author.name} />}
+                    {author && <Avatar src={author.avatar ?? null} name={displayName(author)} />}
                     <span
                       className={`
                         text-xs text-gray-400
                         dark:text-gray-500
                       `}
                     >
-                      {author ? author.name : 'Anonymous'} · {dayjs(item.created_at).format('MMM D')}
+                      {author ? displayName(author) : 'Anonymous'} · {dayjs(item.created_at).format('MMM D')}
                     </span>
                     {item.status === 'done' && (
                       <span
