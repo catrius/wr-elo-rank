@@ -1,9 +1,12 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 export default function BackButton({ to, className = '' }: { to: string; className?: string }) {
+  const navigate = useNavigate();
+
   return (
-    <Link
-      to={to}
+    <button
+      type="button"
+      onClick={() => (window.history.length > 1 ? navigate(-1) : navigate(to))}
       className={[
         `inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm
         font-medium text-gray-700 shadow-sm transition-all
@@ -30,6 +33,6 @@ export default function BackButton({ to, className = '' }: { to: string; classNa
         />
       </svg>
       Back
-    </Link>
+    </button>
   );
 }
