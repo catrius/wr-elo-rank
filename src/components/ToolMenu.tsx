@@ -80,6 +80,37 @@ export default function ToolMenu() {
             {user ? (player ? displayName(player) : 'Claim') : 'Login'}
           </button>
 
+          {player && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                navigate(`/players/${player.id}`);
+              }}
+              className={`
+                flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700
+                transition-colors
+                hover:bg-gray-100
+                dark:text-gray-300 dark:hover:bg-gray-700
+              `}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 3v18h18" />
+                <path d="m19 9-5 5-4-4-3 3" />
+              </svg>
+              My stats
+            </button>
+          )}
+
           <div
             className={`
               border-b border-gray-200
