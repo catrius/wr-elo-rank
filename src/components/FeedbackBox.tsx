@@ -247,25 +247,33 @@ export default function FeedbackBox() {
             </button>
           </div>
         ) : (
-          <p
+          <div
             className={`
-              text-center text-xs text-gray-400
-              dark:text-gray-500
+              flex flex-col items-center gap-2 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-4
+              text-center
+              dark:border-gray-700 dark:bg-gray-800/40
             `}
           >
+            <p
+              className={`
+                text-sm text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              Sign in to suggest features or vote on ideas
+            </p>
             <button
               type="button"
               onClick={() => navigate('/user')}
               className={`
-                cursor-pointer underline
-                hover:text-gray-600
-                dark:hover:text-gray-300
+                cursor-pointer rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white transition-colors
+                hover:bg-indigo-700
+                dark:bg-indigo-500 dark:hover:bg-indigo-400
               `}
             >
               Sign in
-            </button>{' '}
-            to suggest features or vote
-          </p>
+            </button>
+          </div>
         )}
 
         <div className="flex gap-1.5">
@@ -314,209 +322,208 @@ export default function FeedbackBox() {
                 <li
                   key={item.id}
                   className={`
-                    flex items-start gap-3 rounded-lg border border-gray-100 px-3 py-2
+                    flex flex-col gap-2 rounded-lg border border-gray-100 px-3 py-2
                     dark:border-gray-800
                   `}
                 >
-                  <button
-                    type="button"
-                    onClick={() => toggleVote(item)}
-                    disabled={!user}
-                    title={user ? undefined : 'Sign in to vote'}
-                    className={`
-                      flex shrink-0 flex-col items-center gap-0.5 rounded px-1.5 py-1 text-xs transition-colors
-                      disabled:cursor-default
-                      ${
-                        item.votedByMe
-                          ? `
-                            text-indigo-600
-                            dark:text-indigo-400
-                          `
-                          : `
-                            text-gray-400
-                            hover:text-gray-600
-                            dark:text-gray-500 dark:hover:text-gray-300
-                          `
-                      }
-                    `}
-                  >
-                    <span>▲</span>
-                    <span className="font-medium">{item.voteCount}</span>
-                  </button>
-
-                  <div className="min-w-0 flex-1">
-                    {isEditing ? (
-                      <div className="flex flex-col gap-2">
-                        <textarea
-                          value={editText}
-                          onChange={(e) => setEditText(e.target.value)}
-                          rows={2}
-                          className={`
-                            w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm
-                            placeholder:text-gray-300
-                            dark:border-gray-700 dark:bg-gray-800 dark:placeholder:text-gray-600
-                          `}
-                        />
-                        <div className="flex items-center gap-2 self-end">
-                          <button
-                            type="button"
-                            onClick={cancelEdit}
-                            className={`
-                              cursor-pointer rounded px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors
-                              hover:bg-gray-100
-                              dark:text-gray-400 dark:hover:bg-gray-800
-                            `}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => saveEdit(item)}
-                            disabled={!editText.trim()}
-                            className={`
-                              cursor-pointer rounded px-3 py-1.5 text-xs font-medium text-indigo-600 transition-colors
-                              hover:bg-indigo-50
-                              disabled:cursor-not-allowed disabled:opacity-50
-                              dark:text-indigo-400 dark:hover:bg-indigo-950
-                            `}
-                          >
-                            Save
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-sm break-words">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                          {item.text}
-                        </ReactMarkdown>
-                      </div>
-                    )}
-                    <div className="mt-1 flex items-center gap-1.5">
-                      {author && <Avatar src={author.avatar ?? null} name={author.name} />}
-                      <span
+                  {isEditing ? (
+                    <div className="flex flex-col gap-2">
+                      <textarea
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        rows={2}
                         className={`
-                          text-xs text-gray-400
-                          dark:text-gray-500
+                          w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm
+                          placeholder:text-gray-300
+                          dark:border-gray-700 dark:bg-gray-800 dark:placeholder:text-gray-600
                         `}
-                      >
-                        {author ? author.name : 'Anonymous'} · {dayjs(item.created_at).format('MMM D')}
-                      </span>
-                      {item.status === 'done' && (
-                        <span
+                      />
+                      <div className="flex items-center gap-2 self-end">
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
                           className={`
-                            rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700
-                            dark:bg-green-900/40 dark:text-green-400
+                            cursor-pointer rounded px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors
+                            hover:bg-gray-100
+                            dark:text-gray-400 dark:hover:bg-gray-800
                           `}
                         >
-                          Done
-                        </span>
-                      )}
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => saveEdit(item)}
+                          disabled={!editText.trim()}
+                          className={`
+                            cursor-pointer rounded px-3 py-1.5 text-xs font-medium text-indigo-600 transition-colors
+                            hover:bg-indigo-50
+                            disabled:cursor-not-allowed disabled:opacity-50
+                            dark:text-indigo-400 dark:hover:bg-indigo-950
+                          `}
+                        >
+                          Save
+                        </button>
+                      </div>
                     </div>
-                  </div>
-
-                  {(isMine || isAdmin) && !isEditing && (
-                    <div className="flex shrink-0 items-center gap-0.5">
-                      {isMine && (
-                        <button
-                          type="button"
-                          onClick={() => startEdit(item)}
-                          aria-label="Edit feedback"
-                          className={`
-                            cursor-pointer rounded p-1 text-gray-300 transition-colors
-                            hover:bg-gray-100 hover:text-gray-500
-                            dark:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-400
-                          `}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M12 20h9" />
-                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                          </svg>
-                        </button>
-                      )}
-                      {isAdmin && (
-                        <button
-                          type="button"
-                          onClick={() => toggleJoke(item)}
-                          aria-label={item.status === 'joke' ? 'Mark as open' : 'Mark as off-topic'}
-                          className={`
-                            cursor-pointer rounded p-1 transition-colors
-                            ${
-                              item.status === 'joke'
-                                ? `
-                                  text-orange-500
-                                  hover:bg-orange-50
-                                  dark:text-orange-400 dark:hover:bg-orange-900/30
-                                `
-                                : `
-                                  text-gray-300
-                                  hover:bg-gray-100 hover:text-gray-500
-                                  dark:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-400
-                                `
-                            }
-                          `}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-                            <line x1="4" y1="22" x2="4" y2="15" />
-                          </svg>
-                        </button>
-                      )}
-                      {isAdmin && (
-                        <button
-                          type="button"
-                          onClick={() => toggleStatus(item)}
-                          aria-label={item.status === 'done' ? 'Mark as open' : 'Mark as done'}
-                          className={`
-                            cursor-pointer rounded p-1 transition-colors
-                            ${
-                              item.status === 'done'
-                                ? `
-                                  text-green-600
-                                  hover:bg-green-50
-                                  dark:text-green-400 dark:hover:bg-green-900/30
-                                `
-                                : `
-                                  text-gray-300
-                                  hover:bg-gray-100 hover:text-gray-500
-                                  dark:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-400
-                                `
-                            }
-                          `}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                        </button>
-                      )}
+                  ) : (
+                    <div className="text-sm break-words">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                        {item.text}
+                      </ReactMarkdown>
                     </div>
                   )}
+
+                  {/* Footer: author left, vote + edit/admin actions right, so they never eat content width. */}
+                  <div className="flex items-center gap-1.5">
+                    {author && <Avatar src={author.avatar ?? null} name={author.name} />}
+                    <span
+                      className={`
+                        text-xs text-gray-400
+                        dark:text-gray-500
+                      `}
+                    >
+                      {author ? author.name : 'Anonymous'} · {dayjs(item.created_at).format('MMM D')}
+                    </span>
+                    {item.status === 'done' && (
+                      <span
+                        className={`
+                          rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700
+                          dark:bg-green-900/40 dark:text-green-400
+                        `}
+                      >
+                        Done
+                      </span>
+                    )}
+
+                    {!isEditing && (
+                      <div className="ml-auto flex shrink-0 items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => toggleVote(item)}
+                          disabled={!user}
+                          title={user ? undefined : 'Sign in to vote'}
+                          className={`
+                            flex items-center gap-1 rounded px-1.5 py-1 text-xs transition-colors
+                            disabled:cursor-default
+                            ${
+                              item.votedByMe
+                                ? `
+                                  text-indigo-600
+                                  dark:text-indigo-400
+                                `
+                                : `
+                                  text-gray-400
+                                  hover:text-gray-600
+                                  dark:text-gray-500 dark:hover:text-gray-300
+                                `
+                            }
+                          `}
+                        >
+                          <span>▲</span>
+                          <span className="font-medium">{item.voteCount}</span>
+                        </button>
+                        {isMine && (
+                          <button
+                            type="button"
+                            onClick={() => startEdit(item)}
+                            aria-label="Edit feedback"
+                            className={`
+                              cursor-pointer rounded p-1 text-gray-300 transition-colors
+                              hover:bg-gray-100 hover:text-gray-500
+                              dark:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-400
+                            `}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                            </svg>
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => toggleJoke(item)}
+                            aria-label={item.status === 'joke' ? 'Mark as open' : 'Mark as off-topic'}
+                            className={`
+                              cursor-pointer rounded p-1 transition-colors
+                              ${
+                                item.status === 'joke'
+                                  ? `
+                                    text-orange-500
+                                    hover:bg-orange-50
+                                    dark:text-orange-400 dark:hover:bg-orange-900/30
+                                  `
+                                  : `
+                                    text-gray-300
+                                    hover:bg-gray-100 hover:text-gray-500
+                                    dark:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-400
+                                  `
+                              }
+                            `}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                              <line x1="4" y1="22" x2="4" y2="15" />
+                            </svg>
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => toggleStatus(item)}
+                            aria-label={item.status === 'done' ? 'Mark as open' : 'Mark as done'}
+                            className={`
+                              cursor-pointer rounded p-1 transition-colors
+                              ${
+                                item.status === 'done'
+                                  ? `
+                                    text-green-600
+                                    hover:bg-green-50
+                                    dark:text-green-400 dark:hover:bg-green-900/30
+                                  `
+                                  : `
+                                    text-gray-300
+                                    hover:bg-gray-100 hover:text-gray-500
+                                    dark:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-400
+                                  `
+                              }
+                            `}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </li>
               );
             })}
