@@ -79,13 +79,35 @@ export default function Leaderboard({
           return 0;
       }
     };
-    // Second key 'name' for stable/pleasant ordering on ties
+    // Ties break by win % then win count (then name for full determinism).
     return orderBy(
       players.filter((p) => !p.hidden),
-      [iteratee, (p) => displayName(p)],
-      [sort.dir, 'asc'],
+      [iteratee, (p) => (p.total ? p.win / p.total : -Infinity), (p) => p.win, (p) => displayName(p)],
+      [sort.dir, 'desc', 'desc', 'asc'],
     );
   }, [players, sort, displayName]);
+
+  // Competition ranking by Elo: equal Elo shares a rank (1,2,2,4,…). Tie order is win % then wins.
+  // Rank is a player's Elo standing, independent of the active sort column; unranked (no games) get no rank.
+  const rankByPlayerId = useMemo(() => {
+    const map = new Map<number, number>();
+    if (!players) return map;
+    const ranked = orderBy(
+      players.filter((p) => !p.hidden && p.total > 0),
+      [(p) => p.elo, (p) => (p.total ? p.win / p.total : -Infinity), (p) => p.win],
+      ['desc', 'desc', 'desc'],
+    );
+    let lastElo: number | null = null;
+    let lastRank = 0;
+    ranked.forEach((p, i) => {
+      if (p.elo !== lastElo) {
+        lastRank = i + 1;
+        lastElo = p.elo;
+      }
+      map.set(p.id, lastRank);
+    });
+    return map;
+  }, [players]);
 
   const sortedWeeklyStats = useMemo(() => {
     if (!weeklyStats) return [];
@@ -210,16 +232,16 @@ export default function Leaderboard({
     <>
       {sort.key === 'elo' ? (
         <>
-          {abovePlayers.map((row, i) => renderSeasonRow(row, i + 1))}
+          {abovePlayers.map((row) => renderSeasonRow(row, rankByPlayerId.get(row.id) ?? null))}
           {belowPlayers.length > 0 && (
             <>
               <DividerRow label={`Baseline · ${INITIAL_ELO}`} colSpan={seasonColSpan} />
-              {belowPlayers.map((row, i) => renderSeasonRow(row, abovePlayers.length + i + 1))}
+              {belowPlayers.map((row) => renderSeasonRow(row, rankByPlayerId.get(row.id) ?? null))}
             </>
           )}
         </>
       ) : (
-        [...abovePlayers, ...belowPlayers].map((row, i) => renderSeasonRow(row, i + 1))
+        [...abovePlayers, ...belowPlayers].map((row) => renderSeasonRow(row, rankByPlayerId.get(row.id) ?? null))
       )}
       {unrankedPlayers.length > 0 && (
         <>
