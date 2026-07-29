@@ -124,6 +124,11 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 - `countWeekMatches(matches, week)` — Count of completed matches in the week window.
 - `computeWeeklyChemistry(matches, players, week)` — Best and worst duo within the week window (MIN_MATCHES = 2). Returns `{ good: WeeklyDuo | null, bad: WeeklyDuo | null }`.
 
+### leaderboardStats.ts
+
+- `INITIAL_ELO` — Baseline Elo (1500) used for Leaderboard grouping/divider bands.
+- `buildLast5(matches, players)` — Returns `Map<playerId, ('W' | 'L')[]>` of each player's most-recent-5 W/L results from the given (date-desc) match list.
+
 ## Components (src/components/)
 
 ### Layout / Generic
@@ -147,7 +152,7 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 
 ### Statistics
 
-- **Leaderboard** — Sortable table with Season / Weekly tabs, both rendered by a single shared table. Rank (crown medal for top 3 via `RankBadge`) and Player are merged into one sticky-left column. Columns: Player, Elo, W, L, GP, Win %, Form (Form shown when `matches` provided; Season Form uses all matches, Weekly Form is scoped to the current week via `getWeekWindow`). The tab only swaps the second column — Season shows absolute Elo (with `DecayIndicator`), Weekly shows a colored Elo Δ (`EloDeltaCell`); Weekly is a flat list of players active that week, Season is grouped by baseline/unranked `DividerRow` bands. Internal sub-components: `StatRow` (shared row, takes `eloCell`), `TableHead` (shared header), `DividerRow`, `RankBadge`/`CrownIcon`, `Last5`. Tab state is controlled externally via `activeTab`/`onTabChange`. Props: `players`, `streaks`, `matches`, `linkToPlayer`, `weeklyStats`, `weekLabel`, `activeTab`, `onTabChange`.
+- **Leaderboard** — Sortable table with Season / Weekly tabs, both rendered by a single shared table. Rank (crown medal for top 3 via `RankBadge`) and Player are merged into one sticky-left column. Columns: Player, Elo, W, L, GP, Win %, Form (Form shown when `matches` provided; Season Form uses all matches, Weekly Form is scoped to the current week via `getWeekWindow`). The tab only swaps the second column — Season shows absolute Elo (with `DecayIndicator`), Weekly shows a colored Elo Δ (`EloDeltaCell`); Weekly is a flat list of players active that week, Season is grouped by baseline/unranked `DividerRow` bands. Sub-components live in `src/components/leaderboard/`: `StatRow` (shared row, takes `eloCell`), `TableHead` (shared header, includes `SortIndicator`), `DividerRow`, `RankBadge` (includes `CrownIcon`), `Last5`, `DecayIndicator`, `EloDeltaCell`. Tab state is controlled externally via `activeTab`/`onTabChange`. Props: `players`, `streaks`, `matches`, `linkToPlayer`, `weeklyStats`, `weekLabel`, `activeTab`, `onTabChange`.
 - **EloChart** — Recharts line chart of player Elo progression. Season filter dropdown. Props: `playerId`, `matches`.
 - **HeadToHead** — Two player selectors, shows head-to-head win/loss record (only matches where they opposed each other). Internal `PlayerSelect` sub-component.
 - **PlayerSpotlight** — 2x2 stat grid: On Fire (win streak 2+), On Ice (loss streak 2+), Good Chemistry (best duo, 3+ matches), Bad Chemistry (worst duo, 3+ matches). Uses GameDataContext, DisplayNameContext.
