@@ -3,6 +3,7 @@ import { orderBy } from 'es-toolkit';
 import type { Player, Pairing } from '@/types/common.ts';
 import supabase from '@/lib/supabase.ts';
 import Avatar from '@/components/Avatar.tsx';
+import Select from '@/components/Select.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 import { useGameDataContext } from '@/contexts/GameDataContext.tsx';
 
@@ -21,25 +22,17 @@ function PlayerSelect({
   excludeId?: number | null;
   displayName: (player: Player) => string;
 }) {
+  const filtered = excludeId ? players.filter((p) => p.id !== excludeId) : players;
   return (
-    <select
-      value={value ?? ''}
-      onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
+    <Select
       aria-label={label}
-      className={`
-        w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm
-        dark:border-gray-700 dark:bg-gray-800
-      `}
-    >
-      <option value="">Select player</option>
-      {players
-        .filter((p) => (excludeId ? p.id !== excludeId : true))
-        .map((p) => (
-          <option key={p.id} value={p.id}>
-            {displayName(p)}
-          </option>
-        ))}
-    </select>
+      value={String(value ?? '')}
+      options={[
+        { value: '', label: 'Select player' },
+        ...filtered.map((p) => ({ value: String(p.id), label: displayName(p) })),
+      ]}
+      onChange={(v) => onChange(v ? Number(v) : null)}
+    />
   );
 }
 

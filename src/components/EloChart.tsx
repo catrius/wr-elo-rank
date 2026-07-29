@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import supabase from '@/lib/supabase.ts';
 import type { Match, Season } from '@/types/common.ts';
+import Select from '@/components/Select.tsx';
 
 dayjs.extend(utc);
 
@@ -74,24 +75,14 @@ export default function EloChart({ playerId, matches }: EloChartProps) {
         >
           Elo History
         </h2>
-        <select
-          value={selectedSeasonId}
-          onChange={(e) => {
-            const v = e.target.value;
-            setSelectedSeasonId(v === 'all' ? 'all' : Number(v));
-          }}
-          className={`
-            rounded border border-gray-300 bg-white px-3 py-1.5 text-sm
-            dark:border-gray-600 dark:bg-gray-800
-          `}
-        >
-          {seasons.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name ?? `Season ${s.id}`}
-            </option>
-          ))}
-          <option value="all">All seasons</option>
-        </select>
+        <Select
+          value={String(selectedSeasonId)}
+          options={[
+            ...seasons.map((s) => ({ value: String(s.id), label: s.name ?? `Season ${s.id}` })),
+            { value: 'all', label: 'All seasons' },
+          ]}
+          onChange={(v) => setSelectedSeasonId(v === 'all' ? 'all' : Number(v))}
+        />
       </div>
       <div
         className={`
