@@ -26,9 +26,13 @@ export interface GardenState {
 // based, so this flag is what separates a genuinely strong player from one who just shows up a lot.
 export const DRIED_MIN_GAMES = 20;
 export const DRIED_WINRATE_MAX = 45; // percent
-
-export function isDried(seasonTotal: number, winRate: number): boolean {
-  return seasonTotal >= DRIED_MIN_GAMES && winRate < DRIED_WINRATE_MAX;
+// An ice streak this long (or longer) withers the tree regardless of season totals.
+export const DRIED_ICE_STREAK_MIN = 5;
+export function isDried(seasonTotal: number, winRate: number, streak: Streak | null, isDecaying: boolean): boolean {
+  if (seasonTotal >= DRIED_MIN_GAMES && winRate < DRIED_WINRATE_MAX) return true;
+  if (streak?.type === 'ice' && streak.count >= DRIED_ICE_STREAK_MIN) return true;
+  if (isDecaying) return true;
+  return false;
 }
 
 // Calibrated from 2026S1 + 2026S2 win distributions (29 player-seasons combined)
@@ -102,6 +106,6 @@ export function computeGardenState(player: Player, matches: Match[], playerId: n
   const streak = streaks[playerId] ?? null;
 
   const { weather, breakdown } = getWeatherState(streak, completed, playerId, player.win, player.total);
-  const dried = isDried(player.total, breakdown.winRate);
+  const dried = isDried(player.total, breakdown.winRate, streak, player.is_decaying);
   return { stage: getGrowthStage(player.win), weather, breakdown, dried };
 }

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Player, Match } from '@/types/common.ts';
 import {
   computeGardenState,
+  DRIED_ICE_STREAK_MIN,
   DRIED_MIN_GAMES,
   DRIED_WINRATE_MAX,
   type GardenStage,
@@ -489,13 +490,77 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
 
           <p
             className={`
-              mt-4 text-gray-500
-              dark:text-gray-400
+              mt-4 mb-1 font-medium text-gray-600
+              dark:text-gray-300
             `}
           >
-            🥀 A tree <span className="font-medium">withers</span> once you&apos;ve played {DRIED_MIN_GAMES}+ games this
-            season but your win rate stays under {DRIED_WINRATE_MAX}% — lots of games, not enough wins.
+            Wither — any condition triggers 🥀
           </p>
+          <table className="w-full">
+            <thead>
+              <tr
+                className={`
+                  text-left text-gray-400
+                  dark:text-gray-500
+                `}
+              >
+                <th className="pb-1 font-normal">Condition</th>
+                <th className="pb-1 font-normal">Trigger</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                className={
+                  player.total >= DRIED_MIN_GAMES && computed.breakdown.winRate < DRIED_WINRATE_MAX
+                    ? `
+                      font-semibold text-gray-800
+                      dark:text-gray-100
+                    `
+                    : `
+                      text-gray-500
+                      dark:text-gray-400
+                    `
+                }
+              >
+                <td className="py-0.5">Low win rate</td>
+                <td className="py-0.5">
+                  {DRIED_MIN_GAMES}+ games, &lt;{DRIED_WINRATE_MAX}% win rate
+                </td>
+              </tr>
+              <tr
+                className={
+                  computed.breakdown.streakValue <= -DRIED_ICE_STREAK_MIN
+                    ? `
+                      font-semibold text-gray-800
+                      dark:text-gray-100
+                    `
+                    : `
+                      text-gray-500
+                      dark:text-gray-400
+                    `
+                }
+              >
+                <td className="py-0.5">Ice streak</td>
+                <td className="py-0.5">{DRIED_ICE_STREAK_MIN}+ losses in a row</td>
+              </tr>
+              <tr
+                className={
+                  player.is_decaying
+                    ? `
+                      font-semibold text-gray-800
+                      dark:text-gray-100
+                    `
+                    : `
+                      text-gray-500
+                      dark:text-gray-400
+                    `
+                }
+              >
+                <td className="py-0.5">Neglect</td>
+                <td className="py-0.5">Inactive for too long</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       )}
     </div>
