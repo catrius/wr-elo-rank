@@ -1,9 +1,9 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { orderBy } from 'es-toolkit';
 import { Link } from 'react-router-dom';
 import type { Player, Match } from '@/types/common.ts';
 import type { Streak } from '@/utils/streaks.ts';
-import type { PlayerWeekStats } from '@/utils/weeklyStats.ts';
+import { getWeekWindow, type PlayerWeekStats } from '@/utils/weeklyStats.ts';
 import Section from '@/components/Section.tsx';
 import Avatar from '@/components/Avatar.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
@@ -49,12 +49,32 @@ function DecayIndicator() {
 
 const INITIAL_ELO = 1500;
 
+// Most-recent-5 W/L results per player, drawn from the given (already date-desc) match list.
+function buildLast5(matches: Match[], players: Player[]): Map<number, ('W' | 'L')[]> {
+  const map = new Map<number, ('W' | 'L')[]>();
+  const completed = matches.filter((m) => m.result === 'A' || m.result === 'B');
+  players.forEach((p) => {
+    const last5: ('W' | 'L')[] = [];
+    completed.some((m) => {
+      const inA = m.team_a_players.includes(p.id);
+      const inB = m.team_b_players.includes(p.id);
+      if (inA || inB) {
+        last5.push((m.result === 'A' && inA) || (m.result === 'B' && inB) ? 'W' : 'L');
+      }
+      return last5.length >= 5;
+    });
+    map.set(p.id, last5.reverse());
+  });
+  return map;
+}
+
 type SortKey = 'name' | 'elo' | 'win' | 'losses' | 'total' | 'winrate';
 type WeeklySortKey = 'name' | 'eloDelta' | 'wins' | 'losses' | 'total' | 'winrate';
 type TabType = 'season' | 'weekly';
 
 function SortIndicator({ sortKey, current }: { sortKey: string; current: { key: string; dir: 'asc' | 'desc' } }) {
-  if (current.key !== sortKey) return <>&#9654;</>;
+  // Only the actively-sorted column shows an arrow; inactive columns stay clean.
+  if (current.key !== sortKey) return null;
   return current.dir === 'asc' ? <>&#9650;</> : <>&#9660;</>;
 }
 
@@ -114,19 +134,70 @@ function EloDeltaCell({ delta }: { delta: number }) {
   return <span className="text-gray-400">±0</span>;
 }
 
-function SeasonRow({
-  row,
+// Olympic-style crown colors for the top three ranks: gold, silver, bronze
+const MEDAL_COLORS: Record<number, string> = {
+  1: 'text-yellow-400',
+  2: 'text-slate-400',
+  3: 'text-amber-700',
+};
+
+function CrownIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+      <path d="M3 5 L7.5 10 L12 4 L16.5 10 L21 5 L19.5 17.5 L4.5 17.5 Z" />
+      <circle cx="3" cy="5" r="1.2" />
+      <circle cx="12" cy="4" r="1.2" />
+      <circle cx="21" cy="5" r="1.2" />
+      <rect x="4" y="18.5" width="16" height="2.6" rx="1" />
+    </svg>
+  );
+}
+
+function RankBadge({ rank }: { rank: number | null }) {
+  if (rank === null) return <span className="text-gray-400">—</span>;
+  const color = MEDAL_COLORS[rank];
+  if (!color) return <>{rank}</>;
+  return (
+    <span title={`Rank ${rank}`} className="relative inline-flex h-6 w-6 items-center justify-center">
+      <CrownIcon
+        className={`
+          h-6 w-6 drop-shadow-sm
+          ${color}
+        `}
+      />
+      <span
+        className={`
+          absolute inset-0 flex items-center justify-center pt-1 text-[10px] leading-none font-bold text-white
+          [text-shadow:0_1px_2px_rgba(0,0,0,0.7)]
+        `}
+      >
+        {rank}
+      </span>
+    </span>
+  );
+}
+
+// Shared row for both the Season and Weekly tables. Only the second column (`eloCell`) differs
+// between tabs: Season passes an absolute Elo, Weekly passes a colored Elo delta.
+function StatRow({
+  player,
   rank,
-  stripeIndex,
+  eloCell,
+  wins,
+  losses,
+  total,
   linkToPlayer,
   displayName,
   streaks,
   matches = undefined,
   last5,
 }: {
-  row: Player;
+  player: Player;
   rank: number | null;
-  stripeIndex: number;
+  eloCell: ReactNode;
+  wins: number;
+  losses: number;
+  total: number;
   linkToPlayer: boolean;
   displayName: (p: Player) => string;
   streaks: Record<number, Streak>;
@@ -135,55 +206,130 @@ function SeasonRow({
 }) {
   return (
     <tr
-      className={
-        stripeIndex % 2
-          ? `
-            bg-white
-            dark:bg-gray-900
-          `
-          : `
-            bg-gray-50
-            dark:bg-gray-950
-          `
-      }
+      className={`
+        group border-b border-gray-100 transition-colors
+        hover:bg-gray-50
+        dark:border-gray-800 dark:hover:bg-gray-800/40
+      `}
     >
-      <td className="px-3 py-2">{rank ?? '—'}</td>
-      <td className="min-w-40 px-3 py-2">
-        {linkToPlayer ? (
-          <Link
-            to={`/players/${row.id}`}
-            className={`
-              inline-flex items-center gap-2 text-indigo-600
-              hover:underline
-              dark:text-indigo-400
-            `}
-          >
-            <Avatar src={row.avatar} name={displayName(row)} streak={streaks[row.id]} />
-            {displayName(row)}
-          </Link>
-        ) : (
-          <span className="inline-flex items-center gap-2">
-            <Avatar src={row.avatar} name={displayName(row)} streak={streaks[row.id]} />
-            {displayName(row)}
+      <td
+        className={`
+          sticky left-0 z-10 max-w-[12rem] bg-white px-2 py-3 text-sm font-medium
+          group-hover:bg-gray-50
+          dark:bg-gray-900 dark:group-hover:bg-gray-800/40
+        `}
+      >
+        <div className="flex items-center gap-2">
+          <span className="flex w-6 shrink-0 justify-center text-gray-400 tabular-nums">
+            <RankBadge rank={rank} />
           </span>
-        )}
+          {linkToPlayer ? (
+            <Link
+              to={`/players/${player.id}`}
+              className={`
+                flex min-w-0 items-center gap-2 text-indigo-600
+                hover:underline
+                dark:text-indigo-400
+              `}
+            >
+              <Avatar src={player.avatar} name={displayName(player)} streak={streaks[player.id]} />
+              <span className="min-w-0 break-words">{displayName(player)}</span>
+            </Link>
+          ) : (
+            <span className="flex min-w-0 items-center gap-2">
+              <Avatar src={player.avatar} name={displayName(player)} streak={streaks[player.id]} />
+              <span className="min-w-0 break-words">{displayName(player)}</span>
+            </span>
+          )}
+        </div>
       </td>
-      <td className="px-3 py-2 text-right">
-        <span className="inline-flex items-center justify-end gap-1.5">
-          {row.is_decaying && <DecayIndicator />}
-          {row.elo}
-        </span>
-      </td>
-      <td className="px-3 py-2 text-right">{row.win}</td>
-      <td className="px-3 py-2 text-right">{row.total - row.win}</td>
-      <td className="px-3 py-2 text-right">{row.total}</td>
-      <td className="px-3 py-2 text-right">{row.total ? ((row.win / row.total) * 100).toFixed(1) : 0}%</td>
+      <td className="px-2 py-3 text-right tabular-nums">{eloCell}</td>
+      <td className="px-2 py-3 text-right tabular-nums">{wins}</td>
+      <td className="px-2 py-3 text-right tabular-nums">{losses}</td>
+      <td className="px-2 py-3 text-right tabular-nums">{total}</td>
+      <td className="px-2 py-3 text-right tabular-nums">{total ? ((wins / total) * 100).toFixed(1) : 0}%</td>
       {matches !== undefined && (
-        <td className="px-3 py-2">
+        <td className="px-2 py-3">
           <Last5 results={last5} />
         </td>
       )}
     </tr>
+  );
+}
+
+function DividerRow({ label, colSpan }: { label: string; colSpan: number }) {
+  return (
+    <tr>
+      <td
+        colSpan={colSpan}
+        className={`
+          border-b border-gray-100 bg-gray-50 px-3 py-1.5 text-center text-[11px] font-semibold tracking-wide
+          text-gray-400 uppercase
+          dark:border-gray-800 dark:bg-gray-800/40 dark:text-gray-500
+        `}
+      >
+        {label}
+      </td>
+    </tr>
+  );
+}
+
+function TableHead({
+  columns,
+  current,
+  onToggle,
+  showForm,
+}: {
+  columns: { key: string; label: string; align: 'left' | 'right' }[];
+  current: { key: string; dir: 'asc' | 'desc' };
+  onToggle: (key: string) => void;
+  showForm: boolean;
+}) {
+  return (
+    <thead>
+      <tr>
+        {columns.map((col) => (
+          <th
+            key={col.key}
+            className={`
+              px-2 py-2.5 text-xs font-semibold tracking-wide text-gray-400 uppercase
+              dark:text-gray-500
+              ${col.align === 'left' ? 'text-left' : 'text-right'}
+              ${
+                col.key === 'name'
+                  ? `
+                    sticky left-0 z-10 bg-white
+                    dark:bg-gray-900
+                  `
+                  : ''
+              }
+            `}
+          >
+            {col.key === 'name' ? (
+              <span>{col.label}</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onToggle(col.key)}
+                className="flex w-full items-center justify-end gap-1 whitespace-nowrap"
+              >
+                <span>{col.label}</span> <SortIndicator sortKey={col.key} current={current} />
+              </button>
+            )}
+          </th>
+        ))}
+        {showForm && (
+          <th
+            className={`
+              px-2 py-2.5 text-right text-xs font-semibold tracking-wide text-gray-400 uppercase
+              dark:text-gray-500
+            `}
+          >
+            Form
+          </th>
+        )}
+      </tr>
+    </thead>
   );
 }
 
@@ -285,23 +431,21 @@ export default function Leaderboard({
     );
   }, [weeklyStats, weeklySort, displayName]);
 
-  const last5ByPlayer = useMemo(() => {
-    const map = new Map<number, ('W' | 'L')[]>();
-    if (!matches || !players) return map;
-    const completed = matches.filter((m) => m.result === 'A' || m.result === 'B');
-    players.forEach((p) => {
-      const last5: ('W' | 'L')[] = [];
-      completed.some((m) => {
-        const inA = m.team_a_players.includes(p.id);
-        const inB = m.team_b_players.includes(p.id);
-        if (inA || inB) {
-          last5.push((m.result === 'A' && inA) || (m.result === 'B' && inB) ? 'W' : 'L');
-        }
-        return last5.length >= 5;
-      });
-      map.set(p.id, last5.reverse());
+  const last5ByPlayer = useMemo(
+    () => (matches && players ? buildLast5(matches, players) : new Map<number, ('W' | 'L')[]>()),
+    [matches, players],
+  );
+
+  // Weekly Form is scoped to just the current week's matches, not overall recent form.
+  const weeklyLast5ByPlayer = useMemo(() => {
+    if (!matches || !players) return new Map<number, ('W' | 'L')[]>();
+    const week = getWeekWindow(matches);
+    if (!week) return new Map<number, ('W' | 'L')[]>();
+    const weekMatches = matches.filter((m) => {
+      const ts = new Date(m.created_at).getTime();
+      return ts >= week.startTs && ts <= week.endTs;
     });
-    return map;
+    return buildLast5(weekMatches, players);
   }, [matches, players]);
 
   // Three groups: above the initial Elo, at/below it (but played), and unranked (no games yet).
@@ -311,25 +455,97 @@ export default function Leaderboard({
 
   const hasWeeklyTab = weeklyStats && weeklyStats.length > 0;
 
-  const seasonColSpan = 1 + 6 + (matches !== undefined ? 1 : 0);
+  // Player, Elo, Wins, Losses, Total, Win Rate (+ Form when matches are provided)
+  const seasonColSpan = 6 + (matches !== undefined ? 1 : 0);
 
+  // Short, sports-table-style headers so the numeric columns stay narrow (W/L/GP = wins/losses/games played)
   const seasonColumns: { key: SortKey; label: string; align: 'left' | 'right' }[] = [
     { key: 'name', label: 'Player', align: 'left' },
     { key: 'elo', label: 'Elo', align: 'right' },
-    { key: 'win', label: 'Wins', align: 'right' },
-    { key: 'losses', label: 'Losses', align: 'right' },
-    { key: 'total', label: 'Total', align: 'right' },
-    { key: 'winrate', label: 'Win Rate', align: 'right' },
+    { key: 'win', label: 'W', align: 'right' },
+    { key: 'losses', label: 'L', align: 'right' },
+    { key: 'total', label: 'GP', align: 'right' },
+    { key: 'winrate', label: 'Win %', align: 'right' },
   ];
 
   const weeklyColumns: { key: WeeklySortKey; label: string; align: 'left' | 'right' }[] = [
     { key: 'name', label: 'Player', align: 'left' },
-    { key: 'eloDelta', label: 'Elo Δ', align: 'right' },
-    { key: 'wins', label: 'Wins', align: 'right' },
-    { key: 'losses', label: 'Losses', align: 'right' },
-    { key: 'total', label: 'Total', align: 'right' },
-    { key: 'winrate', label: 'Win Rate', align: 'right' },
+    { key: 'eloDelta', label: 'Elo', align: 'right' },
+    { key: 'wins', label: 'W', align: 'right' },
+    { key: 'losses', label: 'L', align: 'right' },
+    { key: 'total', label: 'GP', align: 'right' },
+    { key: 'winrate', label: 'Win %', align: 'right' },
   ];
+
+  const isWeekly = Boolean(activeTab === 'weekly' && hasWeeklyTab);
+  const columns: { key: string; label: string; align: 'left' | 'right' }[] = isWeekly ? weeklyColumns : seasonColumns;
+  const currentSort = isWeekly ? weeklySort : sort;
+  const handleToggle = (key: string) =>
+    isWeekly ? toggleWeeklySort(key as WeeklySortKey) : toggleSort(key as SortKey);
+
+  const renderSeasonRow = (row: Player, rank: number | null) => (
+    <StatRow
+      key={row.id}
+      player={row}
+      rank={rank}
+      eloCell={
+        <span className="inline-flex items-center justify-end gap-1.5 font-semibold">
+          {row.is_decaying && <DecayIndicator />}
+          {row.elo}
+        </span>
+      }
+      wins={row.win}
+      losses={row.total - row.win}
+      total={row.total}
+      linkToPlayer={linkToPlayer}
+      displayName={displayName}
+      streaks={streaks}
+      matches={matches}
+      last5={last5ByPlayer.get(row.id) ?? []}
+    />
+  );
+
+  // Weekly is a flat list; Season is grouped by the baseline with divider bands.
+  const bodyRows = isWeekly ? (
+    sortedWeeklyStats.map((s, i) => (
+      <StatRow
+        key={s.player.id}
+        player={s.player}
+        rank={i + 1}
+        eloCell={<EloDeltaCell delta={s.eloDelta} />}
+        wins={s.wins}
+        losses={s.losses}
+        total={s.total}
+        linkToPlayer={linkToPlayer}
+        displayName={displayName}
+        streaks={streaks}
+        matches={matches}
+        last5={weeklyLast5ByPlayer.get(s.player.id) ?? []}
+      />
+    ))
+  ) : (
+    <>
+      {sort.key === 'elo' ? (
+        <>
+          {abovePlayers.map((row, i) => renderSeasonRow(row, i + 1))}
+          {belowPlayers.length > 0 && (
+            <>
+              <DividerRow label={`Baseline · ${INITIAL_ELO}`} colSpan={seasonColSpan} />
+              {belowPlayers.map((row, i) => renderSeasonRow(row, abovePlayers.length + i + 1))}
+            </>
+          )}
+        </>
+      ) : (
+        [...abovePlayers, ...belowPlayers].map((row, i) => renderSeasonRow(row, i + 1))
+      )}
+      {unrankedPlayers.length > 0 && (
+        <>
+          <DividerRow label="Unranked" colSpan={seasonColSpan} />
+          {unrankedPlayers.map((row) => renderSeasonRow(row, null))}
+        </>
+      )}
+    </>
+  );
 
   return (
     <Section
@@ -370,256 +586,31 @@ export default function Leaderboard({
         ) : null
       }
     >
-      {activeTab === 'weekly' && hasWeeklyTab ? (
-        <>
-          {weekLabel && (
-            <p
-              className={`
-                mb-3 text-xs text-gray-400
-                dark:text-gray-500
-              `}
-            >
-              {weekLabel} · {weeklyStats.length} players active
-            </p>
-          )}
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead
-                className={`
-                  bg-gray-100
-                  dark:bg-gray-800
-                `}
-              >
-                <tr>
-                  <th className="px-3 py-2 text-left font-semibold">#</th>
-                  {weeklyColumns.map((col) => (
-                    <th
-                      key={col.key}
-                      className={`
-                        px-3 py-2 font-semibold
-                        ${col.align === 'left' ? 'text-left' : 'text-right'}
-                      `}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => toggleWeeklySort(col.key)}
-                        className="inline-flex items-center gap-1"
-                      >
-                        {col.label} <SortIndicator sortKey={col.key} current={weeklySort} />
-                      </button>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedWeeklyStats.map((row, i) => (
-                  <tr
-                    key={row.player.id}
-                    className={
-                      i % 2
-                        ? `
-                          bg-white
-                          dark:bg-gray-900
-                        `
-                        : `
-                          bg-gray-50
-                          dark:bg-gray-950
-                        `
-                    }
-                  >
-                    <td className="px-3 py-2">{i + 1}</td>
-                    <td className="min-w-40 px-3 py-2">
-                      {linkToPlayer ? (
-                        <Link
-                          to={`/players/${row.player.id}`}
-                          className={`
-                            inline-flex items-center gap-2 text-indigo-600
-                            hover:underline
-                            dark:text-indigo-400
-                          `}
-                        >
-                          <Avatar
-                            src={row.player.avatar}
-                            name={displayName(row.player)}
-                            streak={streaks[row.player.id]}
-                          />
-                          {displayName(row.player)}
-                        </Link>
-                      ) : (
-                        <span className="inline-flex items-center gap-2">
-                          <Avatar
-                            src={row.player.avatar}
-                            name={displayName(row.player)}
-                            streak={streaks[row.player.id]}
-                          />
-                          {displayName(row.player)}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <EloDeltaCell delta={row.eloDelta} />
-                    </td>
-                    <td className="px-3 py-2 text-right">{row.wins}</td>
-                    <td className="px-3 py-2 text-right">{row.losses}</td>
-                    <td className="px-3 py-2 text-right">{row.total}</td>
-                    <td className="px-3 py-2 text-right">
-                      {row.total ? ((row.wins / row.total) * 100).toFixed(1) : 0}%
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead
-              className={`
-                bg-gray-100
-                dark:bg-gray-800
-              `}
-            >
-              <tr>
-                <th className="px-3 py-2 text-left font-semibold">#</th>
-                {seasonColumns.map((col) => (
-                  <th
-                    key={col.key}
-                    className={`
-                      px-3 py-2 font-semibold
-                      ${col.align === 'left' ? 'text-left' : 'text-right'}
-                    `}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleSort(col.key)}
-                      className="inline-flex items-center gap-1"
-                    >
-                      {col.label} <SortIndicator sortKey={col.key} current={sort} />
-                    </button>
-                  </th>
-                ))}
-                {matches !== undefined && <th className="px-3 py-2 text-right font-semibold">Last 5</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {sort.key === 'elo' ? (
-                <>
-                  {abovePlayers.map((row, i) => (
-                    <SeasonRow
-                      key={row.id}
-                      row={row}
-                      rank={i + 1}
-                      stripeIndex={i}
-                      linkToPlayer={linkToPlayer}
-                      displayName={displayName}
-                      streaks={streaks}
-                      matches={matches}
-                      last5={last5ByPlayer.get(row.id) ?? []}
-                    />
-                  ))}
-                  {belowPlayers.length > 0 && (
-                    <>
-                      <tr>
-                        <td colSpan={seasonColSpan} className="px-3 py-1">
-                          <div
-                            className={`
-                              flex items-center gap-3 text-xs font-medium text-gray-400
-                              dark:text-gray-500
-                            `}
-                          >
-                            <span
-                              className={`
-                                h-px flex-1 bg-gray-200
-                                dark:bg-gray-700
-                              `}
-                            />
-                            BASELINE · {INITIAL_ELO}
-                            <span
-                              className={`
-                                h-px flex-1 bg-gray-200
-                                dark:bg-gray-700
-                              `}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                      {belowPlayers.map((row, i) => (
-                        <SeasonRow
-                          key={row.id}
-                          row={row}
-                          rank={abovePlayers.length + i + 1}
-                          stripeIndex={abovePlayers.length + i}
-                          linkToPlayer={linkToPlayer}
-                          displayName={displayName}
-                          streaks={streaks}
-                          matches={matches}
-                          last5={last5ByPlayer.get(row.id) ?? []}
-                        />
-                      ))}
-                    </>
-                  )}
-                </>
-              ) : (
-                [...abovePlayers, ...belowPlayers].map((row, i) => (
-                  <SeasonRow
-                    key={row.id}
-                    row={row}
-                    rank={i + 1}
-                    stripeIndex={i}
-                    linkToPlayer={linkToPlayer}
-                    displayName={displayName}
-                    streaks={streaks}
-                    matches={matches}
-                    last5={last5ByPlayer.get(row.id) ?? []}
-                  />
-                ))
-              )}
-              {unrankedPlayers.length > 0 && (
-                <>
-                  <tr>
-                    <td colSpan={seasonColSpan} className="px-3 py-1">
-                      <div
-                        className={`
-                          flex items-center gap-3 text-xs font-medium tracking-wide text-gray-400 uppercase
-                          dark:text-gray-500
-                        `}
-                      >
-                        <span
-                          className={`
-                            h-px flex-1 bg-gray-200
-                            dark:bg-gray-700
-                          `}
-                        />
-                        Unranked
-                        <span
-                          className={`
-                            h-px flex-1 bg-gray-200
-                            dark:bg-gray-700
-                          `}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                  {unrankedPlayers.map((row, i) => (
-                    <SeasonRow
-                      key={row.id}
-                      row={row}
-                      rank={null}
-                      stripeIndex={abovePlayers.length + belowPlayers.length + i}
-                      linkToPlayer={linkToPlayer}
-                      displayName={displayName}
-                      streaks={streaks}
-                      matches={matches}
-                      last5={last5ByPlayer.get(row.id) ?? []}
-                    />
-                  ))}
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
+      {isWeekly && weekLabel && (
+        <p
+          className={`
+            mb-3 text-xs text-gray-400
+            dark:text-gray-500
+          `}
+        >
+          {weekLabel} · {weeklyStats?.length ?? 0} players active
+        </p>
       )}
+      <div className="overflow-x-auto">
+        <table
+          className={`
+            min-w-full border-separate border-spacing-0 text-xs
+            sm:text-sm
+            [&_tbody_td]:border-b [&_tbody_td]:border-gray-100
+            dark:[&_tbody_td]:border-gray-800
+            [&_thead_th]:border-b [&_thead_th]:border-gray-200
+            dark:[&_thead_th]:border-gray-700
+          `}
+        >
+          <TableHead columns={columns} current={currentSort} onToggle={handleToggle} showForm={matches !== undefined} />
+          <tbody>{bodyRows}</tbody>
+        </table>
+      </div>
     </Section>
   );
 }
