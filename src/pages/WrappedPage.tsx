@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import BackButton from '@/components/BackButton.tsx';
 import dayjs from 'dayjs';
 import supabase from '@/lib/supabase.ts';
 import type { Player, Match, Season } from '@/types/common.ts';
@@ -295,16 +296,7 @@ export default function WrappedPage() {
   if (!season) {
     return shell(
       <>
-        <Link
-          to={`/players/${playerId}`}
-          className={`
-            mb-6 inline-block text-sm text-blue-600
-            hover:underline
-            dark:text-blue-400
-          `}
-        >
-          &larr; Back
-        </Link>
+        <BackButton to={`/players/${playerId}`} />
         <p
           className={`
             text-gray-500
@@ -320,16 +312,7 @@ export default function WrappedPage() {
   if (completed.length === 0) {
     return shell(
       <>
-        <Link
-          to={`/players/${playerId}`}
-          className={`
-            mb-6 inline-block text-sm text-blue-600
-            hover:underline
-            dark:text-blue-400
-          `}
-        >
-          &larr; Back
-        </Link>
+        <BackButton to={`/players/${playerId}`} />
         <p
           className={`
             text-gray-500
@@ -440,16 +423,7 @@ export default function WrappedPage() {
 
   return shell(
     <>
-      <Link
-        to={`/players/${playerId}`}
-        className={`
-          mb-6 inline-block text-sm text-blue-600
-          hover:underline
-          dark:text-blue-400
-        `}
-      >
-        &larr; Back
-      </Link>
+      <BackButton to={`/players/${playerId}`} />
 
       {/* Hero */}
       <div className="mb-8 flex items-center gap-4">

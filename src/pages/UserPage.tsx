@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import BackButton from '@/components/BackButton.tsx';
 import { upload } from '@vercel/blob/client';
 import supabase from '@/lib/supabase.ts';
 import { useAuth } from '@/contexts/AuthContext.tsx';
@@ -48,16 +49,7 @@ function LoginForm({
           md:p-8
         `}
       >
-        <Link
-          to="/"
-          className={`
-            mb-6 inline-block text-sm text-blue-600
-            hover:underline
-            dark:text-blue-400
-          `}
-        >
-          &larr; Back
-        </Link>
+        <BackButton to="/" />
 
         <h1 className="mb-6 text-xl font-semibold">{isSignUp ? 'Create account' : 'Log in'}</h1>
 
@@ -361,16 +353,7 @@ export default function UserPage() {
             md:p-8
           `}
         >
-          <Link
-            to="/"
-            className={`
-              mb-6 inline-block text-sm text-blue-600
-              hover:underline
-              dark:text-blue-400
-            `}
-          >
-            &larr; Back
-          </Link>
+          <BackButton to="/" />
 
           <h1 className="mb-2 text-xl font-semibold">Claim your player</h1>
           <p
@@ -476,16 +459,7 @@ export default function UserPage() {
           md:p-8
         `}
       >
-        <Link
-          to="/"
-          className={`
-            mb-6 inline-block text-sm text-blue-600
-            hover:underline
-            dark:text-blue-400
-          `}
-        >
-          &larr; Back
-        </Link>
+        <BackButton to="/" />
 
         <div
           className={`

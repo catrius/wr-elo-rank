@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useState, useLayoutEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
+import BackButton from '@/components/BackButton.tsx';
 import supabase from '@/lib/supabase.ts';
 import useSupaQuery from '@/hooks/useSupaQuery.ts';
 import type { Player, Season, Match } from '@/types/common.ts';
@@ -93,6 +94,10 @@ export default function SeasonPage() {
           md:p-8
         `}
       >
+        <div className="mb-4">
+          <BackButton to="/" />
+        </div>
+
         <header
           className={`
             mb-6 flex items-center justify-between gap-4

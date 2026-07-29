@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import supabase from '@/lib/supabase.ts';
 import type { Player, Match } from '@/types/common.ts';
 import Avatar from '@/components/Avatar.tsx';
+import BackButton from '@/components/BackButton.tsx';
 import EloChart from '@/components/EloChart.tsx';
 import PlayerGarden from '@/components/PlayerGarden.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
@@ -102,26 +103,35 @@ export default function PlayerPage() {
           md:p-8
         `}
       >
-        <div className="mb-6 flex items-center gap-4">
-          <Link
-            to="/"
-            className={`
-              text-sm text-blue-600
-              hover:underline
-              dark:text-blue-400
-            `}
-          >
-            &larr; Back
-          </Link>
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <BackButton to="/" />
           <Link
             to={`/wrapped/${playerId}`}
             className={`
-              text-sm text-indigo-600
-              hover:underline
-              dark:text-indigo-400
+              inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold
+              text-white shadow-sm transition-all
+              hover:bg-indigo-500
+              active:scale-95 active:bg-indigo-700
+              dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:active:bg-indigo-600
             `}
           >
-            Season Wrapped →
+            Season Wrapped
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              className="h-4 w-4 shrink-0"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d={
+                  'M2 8a.75.75 0 0 1 .75-.75h8.69L8.22 4.03a.75.75 0 0 1 1.06-1.06l4.5 4.5a.75.75 0 0 1 0 1.06' +
+                  'l-4.5 4.5a.75.75 0 0 1-1.06-1.06l3.22-3.22H2.75A.75.75 0 0 1 2 8Z'
+                }
+                clipRule="evenodd"
+              />
+            </svg>
           </Link>
         </div>
 
