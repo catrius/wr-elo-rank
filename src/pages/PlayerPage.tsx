@@ -16,14 +16,14 @@ export default function PlayerPage() {
   const { id } = useParams<{ id: string }>();
   const playerId = Number(id);
   const [player, setPlayer] = useState<Player | null>(null);
+  const [playerLoading, setPlayerLoading] = useState(true);
   const [matches, setMatches] = useState<Match[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchPlayer = useCallback(async () => {
     const { data } = await supabase.from('player').select().eq('id', playerId).single();
-    if (data) {
-      setPlayer(data as Player);
-    }
+    setPlayer(data ? (data as Player) : null);
+    setPlayerLoading(false);
   }, [playerId]);
 
   const fetchMatches = useCallback(async () => {
@@ -70,7 +70,7 @@ export default function PlayerPage() {
       .then(({ data }) => setIsAdmin(data?.isAdmin ?? false));
   }, [user?.email]);
 
-  if (!player) {
+  if (playerLoading || !player) {
     return (
       <div
         className={`
@@ -84,7 +84,67 @@ export default function PlayerPage() {
             md:p-8
           `}
         >
-          <p>Loading...</p>
+          <div className="mb-6">
+            <BackButton to="/" />
+          </div>
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            {playerLoading ? (
+              <>
+                <div
+                  className={`
+                    mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-500
+                    dark:border-gray-700 dark:border-t-indigo-400
+                  `}
+                />
+                <p
+                  className={`
+                    text-sm text-gray-500
+                    dark:text-gray-400
+                  `}
+                >
+                  Loading player…
+                </p>
+              </>
+            ) : (
+              <>
+                <div
+                  className={`
+                    mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100
+                    dark:bg-gray-800
+                  `}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`
+                      h-8 w-8 text-gray-400
+                      dark:text-gray-500
+                    `}
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                    <line x1="18" y1="2" x2="23" y2="7" />
+                    <line x1="23" y1="2" x2="18" y2="7" />
+                  </svg>
+                </div>
+                <h2 className="mb-1 text-lg font-semibold">Player not found</h2>
+                <p
+                  className={`
+                    text-sm text-gray-500
+                    dark:text-gray-400
+                  `}
+                >
+                  This player doesn&apos;t exist or may have been removed.
+                </p>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );

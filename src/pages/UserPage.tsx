@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import BackButton from '@/components/BackButton.tsx';
 import { upload } from '@vercel/blob/client';
 import supabase from '@/lib/supabase.ts';
@@ -309,7 +309,22 @@ export default function UserPage() {
             md:p-8
           `}
         >
-          <p>Loading...</p>
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div
+              className={`
+                mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-500
+                dark:border-gray-700 dark:border-t-indigo-400
+              `}
+            />
+            <p
+              className={`
+                text-sm text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              Loading…
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -333,7 +348,22 @@ export default function UserPage() {
             md:p-8
           `}
         >
-          <p>Loading...</p>
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div
+              className={`
+                mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-500
+                dark:border-gray-700 dark:border-t-indigo-400
+              `}
+            />
+            <p
+              className={`
+                text-sm text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              Loading…
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -459,7 +489,37 @@ export default function UserPage() {
           md:p-8
         `}
       >
-        <BackButton to="/" className="mb-6" />
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <BackButton to="/" />
+          <Link
+            to={`/players/${player.id}`}
+            className={`
+              inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm
+              font-medium text-gray-700 shadow-sm transition-all
+              hover:bg-gray-50 hover:text-gray-900
+              active:scale-95 active:bg-gray-100
+              dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:active:bg-gray-600
+            `}
+          >
+            My Stats
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              className="h-4 w-4 shrink-0"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d={
+                  'M2 8a.75.75 0 0 1 .75-.75h8.69L8.22 4.03a.75.75 0 0 1 1.06-1.06l4.5 4.5a.75.75 0 0 1 0 1.06' +
+                  'l-4.5 4.5a.75.75 0 0 1-1.06-1.06l3.22-3.22H2.75A.75.75 0 0 1 2 8Z'
+                }
+                clipRule="evenodd"
+              />
+            </svg>
+          </Link>
+        </div>
 
         <div
           className={`
