@@ -396,41 +396,16 @@ export default function FeedbackBox() {
                     )}
 
                     {!isEditing && (
-                      <div className="ml-auto flex shrink-0 items-center gap-0.5">
-                        <button
-                          type="button"
-                          onClick={() => toggleVote(item)}
-                          disabled={!user}
-                          title={user ? undefined : 'Sign in to vote'}
-                          className={`
-                            flex items-center gap-1 rounded px-1.5 py-1 text-xs transition-colors
-                            disabled:cursor-default
-                            ${
-                              item.votedByMe
-                                ? `
-                                  text-indigo-600
-                                  dark:text-indigo-400
-                                `
-                                : `
-                                  text-gray-400
-                                  hover:text-gray-600
-                                  dark:text-gray-500 dark:hover:text-gray-300
-                                `
-                            }
-                          `}
-                        >
-                          <span>▲</span>
-                          <span className="font-medium">{item.voteCount}</span>
-                        </button>
+                      <div className="ml-auto flex shrink-0 items-center gap-1">
                         {isMine && (
                           <button
                             type="button"
                             onClick={() => startEdit(item)}
                             aria-label="Edit feedback"
                             className={`
-                              cursor-pointer rounded p-1 text-gray-300 transition-colors
-                              hover:bg-gray-100 hover:text-gray-500
-                              dark:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-400
+                              cursor-pointer rounded-lg border border-gray-200 p-1.5 text-gray-400 transition-colors
+                              hover:border-gray-300 hover:bg-gray-100 hover:text-gray-600
+                              dark:border-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300
                             `}
                           >
                             <svg
@@ -454,18 +429,19 @@ export default function FeedbackBox() {
                             onClick={() => toggleJoke(item)}
                             aria-label={item.status === 'joke' ? 'Mark as open' : 'Mark as off-topic'}
                             className={`
-                              cursor-pointer rounded p-1 transition-colors
+                              cursor-pointer rounded-lg border p-1.5 transition-colors
                               ${
                                 item.status === 'joke'
                                   ? `
-                                    text-orange-500
+                                    border-orange-300 text-orange-500
                                     hover:bg-orange-50
-                                    dark:text-orange-400 dark:hover:bg-orange-900/30
+                                    dark:border-orange-500/50 dark:text-orange-400 dark:hover:bg-orange-900/30
                                   `
                                   : `
-                                    text-gray-300
-                                    hover:bg-gray-100 hover:text-gray-500
-                                    dark:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-400
+                                    border-gray-200 text-gray-400
+                                    hover:border-gray-300 hover:bg-gray-100 hover:text-gray-600
+                                    dark:border-gray-700 dark:text-gray-500 dark:hover:bg-gray-800
+                                    dark:hover:text-gray-300
                                   `
                               }
                             `}
@@ -491,18 +467,19 @@ export default function FeedbackBox() {
                             onClick={() => toggleStatus(item)}
                             aria-label={item.status === 'done' ? 'Mark as open' : 'Mark as done'}
                             className={`
-                              cursor-pointer rounded p-1 transition-colors
+                              cursor-pointer rounded-lg border p-1.5 transition-colors
                               ${
                                 item.status === 'done'
                                   ? `
-                                    text-green-600
+                                    border-green-300 text-green-600
                                     hover:bg-green-50
-                                    dark:text-green-400 dark:hover:bg-green-900/30
+                                    dark:border-green-500/50 dark:text-green-400 dark:hover:bg-green-900/30
                                   `
                                   : `
-                                    text-gray-300
-                                    hover:bg-gray-100 hover:text-gray-500
-                                    dark:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-400
+                                    border-gray-200 text-gray-400
+                                    hover:border-gray-300 hover:bg-gray-100 hover:text-gray-600
+                                    dark:border-gray-700 dark:text-gray-500 dark:hover:bg-gray-800
+                                    dark:hover:text-gray-300
                                   `
                               }
                             `}
@@ -521,6 +498,34 @@ export default function FeedbackBox() {
                             </svg>
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => toggleVote(item)}
+                          disabled={!user}
+                          title={user ? undefined : 'Sign in to vote'}
+                          className={`
+                            ml-1 flex min-w-11 flex-col items-center rounded-lg border px-2 py-1 leading-none
+                            transition-colors
+                            disabled:cursor-default
+                            ${
+                              item.votedByMe
+                                ? `
+                                  border-indigo-600 bg-indigo-600 text-white shadow-sm
+                                  hover:bg-indigo-700
+                                  dark:border-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400
+                                `
+                                : `
+                                  cursor-pointer border-gray-200 text-gray-500
+                                  hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600
+                                  dark:border-gray-700 dark:text-gray-400 dark:hover:border-indigo-500/50
+                                  dark:hover:bg-indigo-950 dark:hover:text-indigo-300
+                                `
+                            }
+                          `}
+                        >
+                          <span className="text-xs">▲</span>
+                          <span className="text-sm font-bold">{item.voteCount}</span>
+                        </button>
                       </div>
                     )}
                   </div>

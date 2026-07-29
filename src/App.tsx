@@ -50,7 +50,7 @@ function AppContent() {
       <div
         className={`
           hidden
-          md:block
+          lg:block
         `}
       >
         <CurrentGame />
@@ -60,13 +60,13 @@ function AppContent() {
       <div
         className={`
           mt-6 grid gap-6
-          md:mt-10 md:grid-cols-2
+          lg:mt-10 lg:grid-cols-2
         `}
       >
         <AvailablePlayers />
 
         {/* Current in-progress match — mobile: right above NewMatch */}
-        <div className="md:hidden">
+        <div className="lg:hidden">
           <CurrentGame />
         </div>
 
