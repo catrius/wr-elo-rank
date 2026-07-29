@@ -1,16 +1,17 @@
 import { Link } from 'react-router-dom';
 
-export default function BackButton({ to }: { to: string }) {
+export default function BackButton({ to, className = '' }: { to: string; className?: string }) {
   return (
     <Link
       to={to}
-      className={`
-        inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm
+      className={[
+        `inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm
         font-medium text-gray-700 shadow-sm transition-all
         hover:bg-gray-50 hover:text-gray-900
         active:scale-95 active:bg-gray-100
-        dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:active:bg-gray-600
-      `}
+        dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:active:bg-gray-600`,
+        className,
+      ].join(' ')}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

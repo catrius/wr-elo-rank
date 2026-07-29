@@ -49,7 +49,7 @@ function LoginForm({
           md:p-8
         `}
       >
-        <BackButton to="/" />
+        <BackButton to="/" className="mb-6" />
 
         <h1 className="mb-6 text-xl font-semibold">{isSignUp ? 'Create account' : 'Log in'}</h1>
 
@@ -353,7 +353,7 @@ export default function UserPage() {
             md:p-8
           `}
         >
-          <BackButton to="/" />
+          <BackButton to="/" className="mb-6" />
 
           <h1 className="mb-2 text-xl font-semibold">Claim your player</h1>
           <p
@@ -459,7 +459,7 @@ export default function UserPage() {
           md:p-8
         `}
       >
-        <BackButton to="/" />
+        <BackButton to="/" className="mb-6" />
 
         <div
           className={`

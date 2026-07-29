@@ -296,7 +296,7 @@ export default function WrappedPage() {
   if (!season) {
     return shell(
       <>
-        <BackButton to={`/players/${playerId}`} />
+        <BackButton to={`/players/${playerId}`} className="mb-6" />
         <p
           className={`
             text-gray-500
@@ -312,7 +312,7 @@ export default function WrappedPage() {
   if (completed.length === 0) {
     return shell(
       <>
-        <BackButton to={`/players/${playerId}`} />
+        <BackButton to={`/players/${playerId}`} className="mb-6" />
         <p
           className={`
             text-gray-500
@@ -423,7 +423,7 @@ export default function WrappedPage() {
 
   return shell(
     <>
-      <BackButton to={`/players/${playerId}`} />
+      <BackButton to={`/players/${playerId}`} className="mb-6" />
 
       {/* Hero */}
       <div className="mb-8 flex items-center gap-4">
