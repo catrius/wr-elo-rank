@@ -503,51 +503,14 @@ export default function Leaderboard({
               </tr>
             </thead>
             <tbody>
-              {abovePlayers.map((row, i) => (
-                <SeasonRow
-                  key={row.id}
-                  row={row}
-                  rank={i + 1}
-                  stripeIndex={i}
-                  linkToPlayer={linkToPlayer}
-                  displayName={displayName}
-                  streaks={streaks}
-                  matches={matches}
-                  last5={last5ByPlayer.get(row.id) ?? []}
-                />
-              ))}
-              {belowPlayers.length > 0 && (
+              {sort.key === 'elo' ? (
                 <>
-                  <tr>
-                    <td colSpan={seasonColSpan} className="px-3 py-1">
-                      <div
-                        className={`
-                          flex items-center gap-3 text-xs font-medium text-gray-400
-                          dark:text-gray-500
-                        `}
-                      >
-                        <span
-                          className={`
-                            h-px flex-1 bg-gray-200
-                            dark:bg-gray-700
-                          `}
-                        />
-                        BASELINE · {INITIAL_ELO}
-                        <span
-                          className={`
-                            h-px flex-1 bg-gray-200
-                            dark:bg-gray-700
-                          `}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                  {belowPlayers.map((row, i) => (
+                  {abovePlayers.map((row, i) => (
                     <SeasonRow
                       key={row.id}
                       row={row}
-                      rank={abovePlayers.length + i + 1}
-                      stripeIndex={abovePlayers.length + i}
+                      rank={i + 1}
+                      stripeIndex={i}
                       linkToPlayer={linkToPlayer}
                       displayName={displayName}
                       streaks={streaks}
@@ -555,7 +518,62 @@ export default function Leaderboard({
                       last5={last5ByPlayer.get(row.id) ?? []}
                     />
                   ))}
+                  {belowPlayers.length > 0 && (
+                    <>
+                      <tr>
+                        <td colSpan={seasonColSpan} className="px-3 py-1">
+                          <div
+                            className={`
+                              flex items-center gap-3 text-xs font-medium text-gray-400
+                              dark:text-gray-500
+                            `}
+                          >
+                            <span
+                              className={`
+                                h-px flex-1 bg-gray-200
+                                dark:bg-gray-700
+                              `}
+                            />
+                            BASELINE · {INITIAL_ELO}
+                            <span
+                              className={`
+                                h-px flex-1 bg-gray-200
+                                dark:bg-gray-700
+                              `}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                      {belowPlayers.map((row, i) => (
+                        <SeasonRow
+                          key={row.id}
+                          row={row}
+                          rank={abovePlayers.length + i + 1}
+                          stripeIndex={abovePlayers.length + i}
+                          linkToPlayer={linkToPlayer}
+                          displayName={displayName}
+                          streaks={streaks}
+                          matches={matches}
+                          last5={last5ByPlayer.get(row.id) ?? []}
+                        />
+                      ))}
+                    </>
+                  )}
                 </>
+              ) : (
+                [...abovePlayers, ...belowPlayers].map((row, i) => (
+                  <SeasonRow
+                    key={row.id}
+                    row={row}
+                    rank={i + 1}
+                    stripeIndex={i}
+                    linkToPlayer={linkToPlayer}
+                    displayName={displayName}
+                    streaks={streaks}
+                    matches={matches}
+                    last5={last5ByPlayer.get(row.id) ?? []}
+                  />
+                ))
               )}
               {unrankedPlayers.length > 0 && (
                 <>
