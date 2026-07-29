@@ -12,11 +12,14 @@ export default function DebugSelect({
   value,
   options,
   onChange,
+  onStep = undefined,
 }: {
   label: string;
   value: string;
   options: DebugOption[];
   onChange: (value: string) => void;
+  // When provided, renders up/down spinner buttons after the dropdown for quick stepping
+  onStep?: (dir: 1 | -1) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -35,12 +38,12 @@ export default function DebugSelect({
   return (
     <label
       className={`
-        flex flex-1 items-center gap-2 text-gray-600
+        flex min-w-0 flex-1 items-center gap-2 text-gray-600
         dark:text-gray-300
       `}
     >
       <span className="w-16 shrink-0">{label}</span>
-      <div ref={ref} className="relative flex-1">
+      <div ref={ref} className="relative min-w-0 flex-1">
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
@@ -109,6 +112,47 @@ export default function DebugSelect({
           </div>
         )}
       </div>
+      {onStep && (
+        <div
+          className={`
+            flex shrink-0 flex-col overflow-hidden rounded border border-gray-300
+            dark:border-gray-600
+          `}
+        >
+          {([1, -1] as const).map((dir) => (
+            <button
+              key={dir}
+              type="button"
+              onClick={() => onStep(dir)}
+              aria-label={dir === 1 ? 'increase' : 'decrease'}
+              className={`
+                flex h-3 w-5 cursor-pointer items-center justify-center bg-white text-gray-500
+                hover:bg-gray-100
+                dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700
+              `}
+            >
+              <svg
+                className={`
+                  h-2.5 w-2.5
+                  ${dir === 1 ? 'rotate-180' : ''}
+                `}
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  d={
+                    'M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04' +
+                    'l-4.25 4.38a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z'
+                  }
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+          ))}
+        </div>
+      )}
     </label>
   );
 }

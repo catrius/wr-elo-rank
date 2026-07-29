@@ -1,6 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Player, Match } from '@/types/common.ts';
-import { computeGardenState, type GardenStage, type WeatherState } from '@/utils/garden.ts';
+import {
+  computeGardenState,
+  DRIED_MIN_GAMES,
+  DRIED_WINRATE_MAX,
+  type GardenStage,
+  type WeatherState,
+} from '@/utils/garden.ts';
 import {
   DESIGN_H,
   DESIGN_W,
@@ -35,6 +41,7 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
   const [showInfo, setShowInfo] = useState(false);
   const [debugStage, setDebugStage] = useState<GardenStage | null>(null);
   const [debugWeather, setDebugWeather] = useState<WeatherState | null>(null);
+  const [debugDried, setDebugDried] = useState<boolean | null>(null);
 
   // Measure the rendered card width and derive a uniform scale factor for the whole scene
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,6 +56,15 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
 
   const stage = debugStage ?? computed.stage;
   const weather = debugWeather ?? computed.weather;
+  const dried = debugDried ?? computed.dried;
+
+  // Sprite source: healthy trees use stage1–8; withered trees share the healthy seed at stage 1
+  // (a bare seed looks the same either way) and use the dried set from stage 2 up.
+  const treeSrc = dried
+    ? stage === 1
+      ? '/garden/stage1.png'
+      : `/garden/dried${stage}.png`
+    : `/garden/stage${stage}.png`;
 
   const [skyLight, skyDark] = SKY_COLORS[weather];
   const isNight = SKY_IMAGE[weather] === 'night';
@@ -163,8 +179,8 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
           >
             <img
               ref={treeRef}
-              src={`/garden/stage${stage === 2 ? 3 : stage}.png`}
-              alt={STAGE_NAMES[stage]}
+              src={treeSrc}
+              alt={dried ? `${STAGE_NAMES[stage]} (withered)` : STAGE_NAMES[stage]}
               style={{
                 height: STAGE_HEIGHTS[stage],
                 width: 'auto',
@@ -176,14 +192,15 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
           </div>
         </div>
 
-        {/* Stage · weather badge — overlay, top-left (kept at fixed size, outside the scaled stage) */}
+        {/* Stage · weather badge — overlay, top-left (kept at fixed size, outside the scaled stage).
+            Uses a warm light background in every state so the dark 🥀 glyph stays readable. */}
         <div
           className={`
-            absolute top-2 left-2 z-10 flex items-center gap-1 rounded-full bg-black/35 px-2.5 py-1 text-xs font-medium
-            text-white backdrop-blur-sm
+            absolute top-2 left-2 z-10 flex items-center gap-1 rounded-full bg-amber-100/85 px-2.5 py-1 text-xs
+            font-medium text-amber-950 backdrop-blur-sm
           `}
         >
-          {STAGE_NAMES[stage]} · {WEATHER_EMOJI[weather]}
+          {STAGE_NAMES[stage]} · {dried ? '🥀' : '🌳'} · {WEATHER_EMOJI[weather]}
         </div>
 
         {/* Info toggle — overlay, top-right (kept at fixed size, outside the scaled stage) */}
@@ -290,18 +307,38 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
             >
               {computed.breakdown.healthScore.toFixed(1)} → {WEATHER_EMOJI[computed.weather]} {computed.weather}
             </span>
+            <span
+              className={`
+                text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              dried
+            </span>
+            <span
+              className={`
+                font-semibold text-orange-700
+                dark:text-orange-300
+              `}
+            >
+              {player.total} games · {computed.breakdown.winRate.toFixed(1)}% wr →{' '}
+              {computed.dried ? '🥀 withered' : '🌳 healthy'}
+            </span>
           </div>
 
           <div
             className={`
-              flex flex-col gap-2
-              sm:flex-row sm:gap-4
+              grid grid-cols-1 gap-2
+              sm:grid-cols-2 sm:gap-x-4
             `}
           >
             <DebugSelect
               label="Stage"
               value={debugStage != null ? String(debugStage) : ''}
               onChange={(v) => setDebugStage(v ? (Number(v) as GardenStage) : null)}
+              onStep={(dir) =>
+                setDebugStage((prev) => Math.min(8, Math.max(1, (prev ?? computed.stage) + dir)) as GardenStage)
+              }
               options={[
                 { value: '', label: `auto (${computed.stage})` },
                 ...([1, 2, 3, 4, 5, 6, 7, 8] as GardenStage[]).map((s) => ({
@@ -314,12 +351,30 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
               label="Weather"
               value={debugWeather ?? ''}
               onChange={(v) => setDebugWeather((v as WeatherState) || null)}
+              onStep={(dir) =>
+                setDebugWeather((prev) => {
+                  const order: WeatherState[] = ['sunny', 'cloudy', 'rainy', 'stormy', 'blizzard'];
+                  const i = order.indexOf(prev ?? computed.weather);
+                  return order[Math.min(order.length - 1, Math.max(0, i + dir))];
+                })
+              }
               options={[
                 { value: '', label: `auto (${computed.weather})` },
                 ...(['sunny', 'cloudy', 'rainy', 'stormy', 'blizzard'] as WeatherState[]).map((w) => ({
                   value: w,
                   label: `${WEATHER_EMOJI[w]} ${w}`,
                 })),
+              ]}
+            />
+            <DebugSelect
+              label="Dried"
+              value={debugDried == null ? '' : debugDried ? '1' : '0'}
+              onChange={(v) => setDebugDried(v === '' ? null : v === '1')}
+              onStep={(dir) => setDebugDried(dir === 1)}
+              options={[
+                { value: '', label: `auto (${computed.dried ? '🥀 withered' : '🌳 healthy'})` },
+                { value: '1', label: '🥀 withered' },
+                { value: '0', label: '🌳 healthy' },
               ]}
             />
           </div>
@@ -431,6 +486,16 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
               ))}
             </tbody>
           </table>
+
+          <p
+            className={`
+              mt-4 text-gray-500
+              dark:text-gray-400
+            `}
+          >
+            🥀 A tree <span className="font-medium">withers</span> once you&apos;ve played {DRIED_MIN_GAMES}+ games this
+            season but your win rate stays under {DRIED_WINRATE_MAX}% — lots of games, not enough wins.
+          </p>
         </div>
       )}
     </div>

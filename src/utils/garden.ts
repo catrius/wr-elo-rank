@@ -18,6 +18,17 @@ export interface GardenState {
   stage: GardenStage;
   weather: WeatherState;
   breakdown: WeatherBreakdown;
+  dried: boolean;
+}
+
+// A tree turns "dried" (bare/withered sprites) for the high-volume grinder: someone who has played
+// enough games to grow a big tree yet whose season win rate stays poor. Growth (stage) is win-count
+// based, so this flag is what separates a genuinely strong player from one who just shows up a lot.
+export const DRIED_MIN_GAMES = 20;
+export const DRIED_WINRATE_MAX = 45; // percent
+
+export function isDried(seasonTotal: number, winRate: number): boolean {
+  return seasonTotal >= DRIED_MIN_GAMES && winRate < DRIED_WINRATE_MAX;
 }
 
 // Calibrated from 2026S1 + 2026S2 win distributions (29 player-seasons combined)
@@ -91,5 +102,6 @@ export function computeGardenState(player: Player, matches: Match[], playerId: n
   const streak = streaks[playerId] ?? null;
 
   const { weather, breakdown } = getWeatherState(streak, completed, playerId, player.win, player.total);
-  return { stage: getGrowthStage(player.win), weather, breakdown };
+  const dried = isDried(player.total, breakdown.winRate);
+  return { stage: getGrowthStage(player.win), weather, breakdown, dried };
 }

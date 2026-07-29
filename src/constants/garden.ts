@@ -48,8 +48,8 @@ export const SKY_IMAGE: Record<WeatherState, 'day' | 'night'> = {
 
 // Display height (px) for each stage — creates a visible growth progression in the 320px card
 export const STAGE_HEIGHTS: Record<GardenStage, number> = {
-  1: 36,
-  2: 44,
+  1: 26,
+  2: 30,
   3: 52,
   4: 80,
   5: 120,
@@ -60,8 +60,8 @@ export const STAGE_HEIGHTS: Record<GardenStage, number> = {
 
 // Base shadow width (px) per stage — bigger trees cast wider shadows on the grass
 export const SHADOW_WIDTHS: Record<GardenStage, number> = {
-  1: 22,
-  2: 26,
+  1: 16,
+  2: 18,
   3: 26,
   4: 44,
   5: 60,
