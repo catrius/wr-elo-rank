@@ -16,6 +16,10 @@ type SortKey = 'name' | 'elo' | 'win' | 'losses' | 'total' | 'winrate';
 type WeeklySortKey = 'name' | 'eloDelta' | 'wins' | 'losses' | 'total' | 'winrate';
 type TabType = 'season' | 'weekly';
 
+// Only hand out the bottom-3 "devil wings" once the pool is large enough that they can't
+// collide with the top-3 crowns and don't feel like piling on a tiny leaderboard.
+const BOTTOM_BADGE_MIN_PLAYERS = 8;
+
 export default function Leaderboard({
   players,
   streaks,
@@ -109,6 +113,30 @@ export default function Leaderboard({
     return map;
   }, [players]);
 
+  // Bottom-3 "hall of shame" ranks, mirroring rankByPlayerId but counting up from the worst Elo
+  // (1 = dead last). Equal Elo shares a bottom rank. Skipped for small pools, and never applied to
+  // a top-3 player, so the crowns and wings can't land on the same row.
+  const bottomRankByPlayerId = useMemo(() => {
+    const map = new Map<number, number>();
+    if (!players) return map;
+    const ranked = orderBy(
+      players.filter((p) => !p.hidden && p.total > 0),
+      [(p) => p.elo, (p) => (p.total ? p.win / p.total : -Infinity), (p) => p.win],
+      ['asc', 'asc', 'asc'],
+    );
+    if (ranked.length < BOTTOM_BADGE_MIN_PLAYERS) return map;
+    let lastElo: number | null = null;
+    let lastRank = 0;
+    ranked.forEach((p, i) => {
+      if (p.elo !== lastElo) {
+        lastRank = i + 1;
+        lastElo = p.elo;
+      }
+      if (lastRank <= 3 && (rankByPlayerId.get(p.id) ?? 0) > 3) map.set(p.id, lastRank);
+    });
+    return map;
+  }, [players, rankByPlayerId]);
+
   const sortedWeeklyStats = useMemo(() => {
     if (!weeklyStats) return [];
     const iteratee = (s: PlayerWeekStats) => {
@@ -193,6 +221,7 @@ export default function Leaderboard({
       key={row.id}
       player={row}
       rank={rank}
+      bottomRank={bottomRankByPlayerId.get(row.id) ?? null}
       eloCell={
         <span className="inline-flex items-center justify-end gap-1.5 font-semibold">
           {row.is_decaying && <DecayIndicator />}
@@ -212,22 +241,30 @@ export default function Leaderboard({
 
   // Weekly is a flat list; Season is grouped by the baseline with divider bands.
   const bodyRows = isWeekly ? (
-    sortedWeeklyStats.map((s, i) => (
-      <StatRow
-        key={s.player.id}
-        player={s.player}
-        rank={i + 1}
-        eloCell={<EloDeltaCell delta={s.eloDelta} />}
-        wins={s.wins}
-        losses={s.losses}
-        total={s.total}
-        linkToPlayer={linkToPlayer}
-        displayName={displayName}
-        streaks={streaks}
-        matches={matches}
-        last5={weeklyLast5ByPlayer.get(s.player.id) ?? []}
-      />
-    ))
+    sortedWeeklyStats.map((s, i) => {
+      // Weekly ranks are positional in the current sort; bottom 3 = last three rows, mirroring the
+      // top-3 crowns. Same min-pool guard, and never on a top-3 row.
+      const fromBottom = sortedWeeklyStats.length - i;
+      const bottomRank =
+        sortedWeeklyStats.length >= BOTTOM_BADGE_MIN_PLAYERS && i > 2 && fromBottom <= 3 ? fromBottom : null;
+      return (
+        <StatRow
+          key={s.player.id}
+          player={s.player}
+          rank={i + 1}
+          bottomRank={bottomRank}
+          eloCell={<EloDeltaCell delta={s.eloDelta} />}
+          wins={s.wins}
+          losses={s.losses}
+          total={s.total}
+          linkToPlayer={linkToPlayer}
+          displayName={displayName}
+          streaks={streaks}
+          matches={matches}
+          last5={weeklyLast5ByPlayer.get(s.player.id) ?? []}
+        />
+      );
+    })
   ) : (
     <>
       {sort.key === 'elo' ? (

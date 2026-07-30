@@ -11,6 +11,7 @@ import Last5 from '@/components/leaderboard/Last5.tsx';
 export default function StatRow({
   player,
   rank,
+  bottomRank = null,
   eloCell,
   wins,
   losses,
@@ -23,6 +24,7 @@ export default function StatRow({
 }: {
   player: Player;
   rank: number | null;
+  bottomRank?: number | null;
   eloCell: ReactNode;
   wins: number;
   losses: number;
@@ -43,14 +45,14 @@ export default function StatRow({
     >
       <td
         className={`
-          sticky left-0 z-10 max-w-[12rem] bg-white px-2 py-3 text-sm font-medium
+          sticky left-0 z-10 max-w-[12rem] bg-white py-3 pr-2 text-sm font-medium
           group-hover:bg-gray-50
           dark:bg-gray-900 dark:group-hover:bg-gray-800/40
         `}
       >
         <div className="flex items-center gap-2">
-          <span className="flex w-6 shrink-0 justify-center text-gray-400 tabular-nums">
-            <RankBadge rank={rank} />
+          <span className="flex w-12 shrink-0 justify-center text-gray-400 tabular-nums">
+            <RankBadge rank={rank} bottomRank={bottomRank} />
           </span>
           {linkToPlayer ? (
             <Link

@@ -22,16 +22,16 @@ export default function TableHead({
           <th
             key={col.key}
             className={`
-              px-2 py-2.5 text-xs font-semibold tracking-wide text-gray-400 uppercase
+              py-2.5 text-xs font-semibold tracking-wide text-gray-400 uppercase
               dark:text-gray-500
               ${col.align === 'left' ? 'text-left' : 'text-right'}
               ${
                 col.key === 'name'
                   ? `
-                    sticky left-0 z-10 bg-white
+                    sticky left-0 z-10 bg-white pr-2
                     dark:bg-gray-900
                   `
-                  : ''
+                  : 'px-2'
               }
             `}
           >
