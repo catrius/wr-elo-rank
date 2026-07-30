@@ -320,14 +320,48 @@ export default function FeedbackBox() {
               const author = item.player_id ? playerMap[item.player_id] : null;
               const isMine = !!user && item.user_id === user.id;
               const isEditing = editingId === item.id;
+              const isDone = item.status === 'done';
               return (
                 <li
                   key={item.id}
                   className={`
-                    flex flex-col gap-2 rounded-lg border border-gray-100 px-3 py-2
-                    dark:border-gray-800
+                    relative flex flex-col gap-2 rounded-lg border px-3 py-2
+                    ${
+                      isDone
+                        ? `
+                          border-green-400 bg-green-50/40
+                          dark:border-green-500/60 dark:bg-green-900/10
+                        `
+                        : `
+                          border-gray-100
+                          dark:border-gray-800
+                        `
+                    }
                   `}
                 >
+                  {isDone && (
+                    <span
+                      aria-label="Done"
+                      className={`
+                        absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-green-500
+                        text-white shadow-sm
+                        dark:bg-green-500
+                      `}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-3 w-3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </span>
+                  )}
                   {isEditing ? (
                     <div className="flex flex-col gap-2">
                       <textarea
@@ -386,16 +420,6 @@ export default function FeedbackBox() {
                     >
                       {author ? displayName(author) : 'Anonymous'} · {dayjs(item.created_at).format('MMM D')}
                     </span>
-                    {item.status === 'done' && (
-                      <span
-                        className={`
-                          rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700
-                          dark:bg-green-900/40 dark:text-green-400
-                        `}
-                      >
-                        Done
-                      </span>
-                    )}
 
                     {!isEditing && (
                       <div className="ml-auto flex shrink-0 items-center gap-1">
