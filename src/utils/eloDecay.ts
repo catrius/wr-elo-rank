@@ -1,31 +1,27 @@
-import dayjs from 'dayjs';
 import type { Match, Player } from '../types/common.ts';
+
+/** A player decays once this many whole days have passed since their last completed match. */
+export const DECAY_AFTER_DAYS = 14;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface DecayResult {
   player: Player;
-  weeksInactive: number;
+  daysInactive: number;
   deduction: number;
-}
-
-function weekStart(d: dayjs.Dayjs): dayjs.Dayjs {
-  const dow = d.day(); // 0=Sun … 6=Sat
-  const daysToMonday = dow === 0 ? 6 : dow - 1;
-  return d.subtract(daysToMonday, 'day').startOf('day');
 }
 
 /**
  * Returns players eligible for a -10 Elo deduction this run.
- * Grace rule: decay starts on the second consecutive missed week.
- *   weeksInactive=1 → grace, no deduction
- *   weeksInactive=2 → -10 (first deduction)
- *   weeksInactive=3 → -10 (second deduction), etc.
+ * A player decays once they have not played a completed match for
+ * DECAY_AFTER_DAYS (14) whole days — measured from the actual last-match
+ * timestamp, so a single missed play-week is still within grace.
  *
  * @param players All active (non-hidden) players
  * @param matches All completed matches (result 'A' or 'B')
  * @param now     Injectable for testing; defaults to today
  */
 export function findDecayPlayers(players: Player[], matches: Match[], now: Date = new Date()): DecayResult[] {
-  const thisWeekMonday = weekStart(dayjs(now));
+  const nowMs = now.getTime();
 
   const lastPlayedMs = new Map<number, number>();
   matches
@@ -41,9 +37,9 @@ export function findDecayPlayers(players: Player[], matches: Match[], now: Date 
     const lastTs = lastPlayedMs.get(player.id);
     if (!lastTs) return [];
 
-    const weeksInactive = thisWeekMonday.diff(weekStart(dayjs(lastTs)), 'week');
-    if (weeksInactive < 2) return [];
+    const daysInactive = Math.floor((nowMs - lastTs) / DAY_MS);
+    if (daysInactive < DECAY_AFTER_DAYS) return [];
 
-    return [{ player, weeksInactive, deduction: 10 }];
+    return [{ player, daysInactive, deduction: 10 }];
   });
 }

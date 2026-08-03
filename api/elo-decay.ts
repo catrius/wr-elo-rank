@@ -1,18 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
-import dayjs from 'dayjs';
 import type { IncomingMessage, ServerResponse } from 'http';
 
 type Player = { id: number; name: string; elo: number; is_decaying: boolean };
 type Match = { created_at: string; result: string | null; team_a_players: number[]; team_b_players: number[] };
 
-function weekStart(d: dayjs.Dayjs): dayjs.Dayjs {
-  const dow = d.day();
-  const daysToMonday = dow === 0 ? 6 : dow - 1;
-  return d.subtract(daysToMonday, 'day').startOf('day');
-}
+/** A player decays once this many whole days have passed since their last completed match. */
+const DECAY_AFTER_DAYS = 14;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function findDecayPlayers(players: Player[], matches: Match[]) {
-  const thisWeekMonday = weekStart(dayjs());
+  const nowMs = Date.now();
 
   const lastPlayedMs = new Map<number, number>();
   matches
@@ -27,9 +24,9 @@ function findDecayPlayers(players: Player[], matches: Match[]) {
   return players.flatMap((player) => {
     const lastTs = lastPlayedMs.get(player.id);
     if (!lastTs) return [];
-    const weeksInactive = thisWeekMonday.diff(weekStart(dayjs(lastTs)), 'week');
-    if (weeksInactive < 2) return [];
-    return [{ player, weeksInactive }];
+    const daysInactive = Math.floor((nowMs - lastTs) / DAY_MS);
+    if (daysInactive < DECAY_AFTER_DAYS) return [];
+    return [{ player, daysInactive }];
   });
 }
 
@@ -83,7 +80,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(
     JSON.stringify({
-      decayed: decaying.map((d) => ({ id: d.player.id, name: d.player.name, weeksInactive: d.weeksInactive })),
+      decayed: decaying.map((d) => ({ id: d.player.id, name: d.player.name, daysInactive: d.daysInactive })),
       recovered: recovering.map((p) => ({ id: (p as Player).id, name: (p as Player).name })),
     }),
   );

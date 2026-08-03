@@ -44,7 +44,7 @@ Direct Elo math in `src/utils/elo.ts` (no external library). Dynamic K-factor ba
 
 ### Elo decay
 
-`src/utils/eloDecay.ts` flags players inactive for 2+ whole weeks (relative to the current Monday) for a -10/week deduction, with a 1-week grace period. The `player.is_decaying` flag drives the Leaderboard `DecayIndicator`; it is cleared when a player next plays a match.
+`src/utils/eloDecay.ts` flags players who haven't played a completed match for 14+ whole days (`DECAY_AFTER_DAYS`, measured from the actual last-match timestamp) for a -10/week deduction — a single missed play-week is still within grace. The `player.is_decaying` flag drives the Leaderboard `DecayIndicator`; it is cleared when a player next plays a match.
 
 ### Team suggestion algorithm
 
@@ -143,7 +143,7 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 
 ### eloDecay.ts
 
-- `findDecayPlayers(players, matches, now = new Date())` — Returns `DecayResult[]` (`{ player, weeksInactive, deduction }`) for players inactive 2+ whole weeks (relative to the current Monday), each with a -10 deduction. 1-week grace period; `now` is injectable for testing. Uses dayjs.
+- `findDecayPlayers(players, matches, now = new Date())` — Returns `DecayResult[]` (`{ player, daysInactive, deduction }`) for players who haven't played a completed match for `DECAY_AFTER_DAYS` (14) whole days, each with a -10 deduction. `daysInactive` is measured from the actual last-match timestamp; `now` is injectable for testing.
 
 ### garden.ts
 
