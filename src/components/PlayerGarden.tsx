@@ -23,6 +23,7 @@ import {
   WEATHER_SWAY_MULT,
   WEATHER_TINT,
 } from '@/constants/garden.ts';
+import Birds from '@/components/garden/Birds.tsx';
 import Blizzard from '@/components/garden/Blizzard.tsx';
 import Clouds from '@/components/garden/Clouds.tsx';
 import DebugSelect from '@/components/garden/DebugSelect.tsx';
@@ -133,7 +134,12 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
           />
 
           {/* Weather overlays */}
-          {weather === 'sunny' && <SunRays />}
+          {weather === 'sunny' && (
+            <>
+              <SunRays />
+              <Birds />
+            </>
+          )}
           {(weather === 'cloudy' || weather === 'stormy') && <Clouds dark={weather === 'stormy'} />}
           {weather === 'rainy' && <RainDrops />}
           {weather === 'stormy' && (

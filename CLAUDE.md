@@ -186,7 +186,7 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 - **SeasonSpotlight** — 4-panel grid for season pages: Good Chemistry (top 5 duos), Bad Chemistry (bottom 5 duos), Rank Improved (top 5 climbers), Rank Dropped (top 5 fallers, vs `prevPlayers`). Props: `players`, `matches`, `prevPlayers`. Internal `DuoList`, `RankList`.
 - **Pairings** — CRUD for player pairings. Inline add/edit forms, prevents self-pairing. Writes directly to Supabase `pairing` table (insert/update/delete), refreshes context after each. Internal `PlayerSelect`. Uses GameDataContext, DisplayNameContext.
 - **FeedbackBox** — Feature-request/feedback board. Reads/writes `feedback` + `feedback_vote`: insert feedback, toggle vote, edit own text, admin toggles status (open/done/joke). Status filter tabs, rc-pagination (PAGE_SIZE 10), markdown rendering (react-markdown + remark-gfm). Author names respect the ingame toggle via `displayName`. Uses AuthContext, DisplayNameContext, GameDataContext.
-- **PlayerGarden** — Animated pixel-art garden visualizing a player's form (tree stage + weather). Computes state via `computeGardenState` (memoized); `ResizeObserver` scales a fixed 480×320 design canvas as one unit; `requestAnimationFrame` tree sway (summed sine waves). Weather → overlay: sunny→`SunRays`, cloudy/stormy→`Clouds` (dark when stormy), rainy→`RainDrops`, stormy→`RainDrops heavy` + `Lightning`, blizzard→`Blizzard`. Info panel + admin-only debug panel (`DebugSelect` overrides). Props: `player`, `matches`, `playerId`, `isAdmin?`.
+- **PlayerGarden** — Animated pixel-art garden visualizing a player's form (tree stage + weather). Computes state via `computeGardenState` (memoized); `ResizeObserver` scales a fixed 480×320 design canvas as one unit; `requestAnimationFrame` tree sway (summed sine waves). Weather → overlay: sunny→`SunRays` + `Birds`, cloudy/stormy→`Clouds` (dark when stormy), rainy→`RainDrops`, stormy→`RainDrops heavy` + `Lightning`, blizzard→`Blizzard`. Info panel + admin-only debug panel (`DebugSelect` overrides). Props: `player`, `matches`, `playerId`, `isAdmin?`.
 
 ### Leaderboard sub-components (src/components/leaderboard/)
 
@@ -201,10 +201,11 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 ### Garden overlays (src/components/garden/)
 
 - **SunRays** — Sunny: white-hot sun core, rotating rays, anamorphic flare star, lens-flare ghost chain.
+- **Birds** — Sunny: a few phoenixes gliding across the sky on a rising path, cycling a 6-frame wing-flap sprite (`public/garden/phoenix.png`, a 192×32 strip of 32×32 cells) via stepped `background-position`; faces right (travel direction), varied size/speed for depth. Rendered alongside `SunRays`.
 - **Clouds** — Cloudy/stormy: 6 drifting box-shadow clouds. Props: `dark?` (stormy palette). First cloud is deliberately first so `Lightning` can sync to it.
 - **RainDrops** — Rainy: falling drops (15 light / 22 heavy). Props: `heavy?`.
 - **Lightning** — Stormy: 4 SVG bolts drifting under clouds + ambient sky flash; lead bolt synced to top-left cloud.
-- **Blizzard** — Blizzard: 26 wind-driven snowflakes + 6 wind-streak wisps on a shared diagonal.
+- **Blizzard** — Blizzard: two parallax snow layers (60 far + 18 near blurred flakes, each with its own drift) + 10 wind-streak wisps on a shared diagonal + a pulsing whiteout haze veil.
 - **DebugSelect** — Admin debug dropdown (custom `<select>` replacement) with optional up/down steppers. Props: `label`, `value`, `options`, `onChange`, `onStep?`.
 
 ### Global UI
