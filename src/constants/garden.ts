@@ -6,8 +6,8 @@ export const STAGE_NAMES: Record<GardenStage, string> = {
   3: 'Sapling',
   4: 'Young Tree',
   5: 'Leafy',
-  6: 'Flowering',
-  7: 'Fruiting',
+  6: 'Mature',
+  7: 'Grand',
   8: 'Ancient',
 };
 
