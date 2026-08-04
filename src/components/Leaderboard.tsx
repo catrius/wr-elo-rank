@@ -182,9 +182,19 @@ export default function Leaderboard({
   }, [matches, players]);
 
   // Three groups: above the initial Elo, at/below it (but played), and unranked (no games yet).
-  const abovePlayers = useMemo(() => sortedPlayers.filter((p) => p.total > 0 && p.elo > INITIAL_ELO), [sortedPlayers]);
-  const belowPlayers = useMemo(() => sortedPlayers.filter((p) => p.total > 0 && p.elo <= INITIAL_ELO), [sortedPlayers]);
+  const rankedPlayers = useMemo(() => sortedPlayers.filter((p) => p.total > 0), [sortedPlayers]);
+  const abovePlayers = useMemo(() => rankedPlayers.filter((p) => p.elo > INITIAL_ELO), [rankedPlayers]);
+  const belowPlayers = useMemo(() => rankedPlayers.filter((p) => p.elo <= INITIAL_ELO), [rankedPlayers]);
   const unrankedPlayers = useMemo(() => sortedPlayers.filter((p) => p.total === 0), [sortedPlayers]);
+
+  // Ascending Elo sort lists the weakest players first, so the below-baseline band leads.
+  const eloBands = useMemo(
+    () =>
+      sort.dir === 'asc'
+        ? { leading: belowPlayers, trailing: abovePlayers }
+        : { leading: abovePlayers, trailing: belowPlayers },
+    [sort.dir, abovePlayers, belowPlayers],
+  );
 
   const hasWeeklyTab = weeklyStats && weeklyStats.length > 0;
 
@@ -268,17 +278,20 @@ export default function Leaderboard({
   ) : (
     <>
       {sort.key === 'elo' ? (
+        // Bands follow the sort direction: desc puts above-baseline on top, asc flips them so the
+        // divider always sits between the two groups instead of splitting them out of order.
         <>
-          {abovePlayers.map((row) => renderSeasonRow(row, rankByPlayerId.get(row.id) ?? null))}
-          {belowPlayers.length > 0 && (
+          {eloBands.leading.map((row) => renderSeasonRow(row, rankByPlayerId.get(row.id) ?? null))}
+          {eloBands.leading.length > 0 && eloBands.trailing.length > 0 && (
             <>
               <DividerRow label={`Baseline · ${INITIAL_ELO}`} colSpan={seasonColSpan} />
-              {belowPlayers.map((row) => renderSeasonRow(row, rankByPlayerId.get(row.id) ?? null))}
+              {eloBands.trailing.map((row) => renderSeasonRow(row, rankByPlayerId.get(row.id) ?? null))}
             </>
           )}
         </>
       ) : (
-        [...abovePlayers, ...belowPlayers].map((row) => renderSeasonRow(row, rankByPlayerId.get(row.id) ?? null))
+        // Other columns aren't Elo-ordered, so the baseline bands don't apply — one flat list.
+        rankedPlayers.map((row) => renderSeasonRow(row, rankByPlayerId.get(row.id) ?? null))
       )}
       {unrankedPlayers.length > 0 && (
         <>
