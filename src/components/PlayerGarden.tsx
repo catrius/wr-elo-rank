@@ -1,19 +1,24 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Player, Match } from '@/types/common.ts';
 import {
+  buildPests,
   computeGardenState,
-  DRIED_ICE_STREAK_MIN,
-  DRIED_MIN_GAMES,
-  DRIED_WINRATE_MAX,
+  PEST_WASP_MIN_CAUSES,
   type GardenStage,
+  type PestCause,
+  type PestKind,
   type WeatherState,
 } from '@/utils/garden.ts';
 import {
   DESIGN_H,
   DESIGN_W,
+  PEST_CAUSE_KIND,
+  PEST_NAMES,
+  PEST_ROWS,
   SHADOW_WIDTHS,
   SKY_COLORS,
   SKY_IMAGE,
+  STAGE_ASPECT,
   STAGE_HEIGHTS,
   STAGE_NAMES,
   STAGE_ROWS,
@@ -26,8 +31,10 @@ import {
 import Birds from '@/components/garden/Birds.tsx';
 import Blizzard from '@/components/garden/Blizzard.tsx';
 import Clouds from '@/components/garden/Clouds.tsx';
+import DebugCauses from '@/components/garden/DebugCauses.tsx';
 import DebugSelect from '@/components/garden/DebugSelect.tsx';
 import Lightning from '@/components/garden/Lightning.tsx';
+import Pests from '@/components/garden/Pests.tsx';
 import RainDrops from '@/components/garden/RainDrops.tsx';
 import SunRays from '@/components/garden/SunRays.tsx';
 
@@ -43,7 +50,7 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
   const [showInfo, setShowInfo] = useState(false);
   const [debugStage, setDebugStage] = useState<GardenStage | null>(null);
   const [debugWeather, setDebugWeather] = useState<WeatherState | null>(null);
-  const [debugDried, setDebugDried] = useState<boolean | null>(null);
+  const [debugPests, setDebugPests] = useState<PestCause[] | null>(null);
 
   // Measure the rendered card width and derive a uniform scale factor for the whole scene
   const containerRef = useRef<HTMLDivElement>(null);
@@ -58,15 +65,32 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
 
   const stage = debugStage ?? computed.stage;
   const weather = debugWeather ?? computed.weather;
-  const dried = debugDried ?? computed.dried;
+  const causes = debugPests ?? computed.causes;
+  // Recompute the swarm when a debug override or the stage changes; otherwise reuse the computed one
+  const pests = useMemo(
+    () => (debugPests || debugStage != null ? buildPests(causes, stage, playerId) : computed.pests),
+    [debugPests, debugStage, causes, stage, playerId, computed.pests],
+  );
+  const infested = pests.length > 0;
 
-  // Sprite source: healthy trees use stage1–8; withered trees share the healthy seed at stage 1
-  // (a bare seed looks the same either way) and use the dried set from stage 2 up.
-  const treeSrc = dried
-    ? stage === 1
-      ? '/garden/stage1.png'
-      : `/garden/dried${stage}.png`
-    : `/garden/stage${stage}.png`;
+  // Debug readout: what the swarm actually contains, and which species the stage's cap squeezed out
+  const swarmSummary = useMemo(() => {
+    const counts = new Map<PestKind, number>();
+    pests.forEach((p) => counts.set(p.kind, (counts.get(p.kind) ?? 0) + 1));
+    return [...counts].map(([kind, n]) => `${n}× ${kind}`).join(', ');
+  }, [pests]);
+  const droppedKinds = useMemo(() => {
+    const expected = new Set<PestKind>(causes.map((c) => PEST_CAUSE_KIND[c]));
+    if (causes.length >= PEST_WASP_MIN_CAUSES) expected.add('wasp');
+    const rendered = new Set(pests.map((p) => p.kind));
+    return [...expected].filter((k) => !rendered.has(k));
+  }, [causes, pests]);
+
+  // The tree sprite is the same whether or not it's infested — the bugs are what change
+  const treeSrc = `/garden/stage${stage}.png`;
+  // Pest positions are fractions of the tree's rendered box, derived from the sprite's aspect ratio
+  const treeH = STAGE_HEIGHTS[stage];
+  const treeW = treeH * STAGE_ASPECT[stage];
 
   const [skyLight, skyDark] = SKY_COLORS[weather];
   const isNight = SKY_IMAGE[weather] === 'night';
@@ -75,7 +99,7 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
 
   // Drive the tree's sway in JS so it never exactly repeats: sum several sine waves at
   // incommensurate frequencies with random phases (re-rolled on each stage/weather change).
-  const treeRef = useRef<HTMLImageElement>(null);
+  const treeRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = treeRef.current;
     if (!el) return undefined;
@@ -179,35 +203,41 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
             }}
           />
 
-          {/* Tree — baseline sunk into the grass so it reads as planted */}
+          {/* Tree — baseline sunk into the grass so it reads as planted. The pest overlay lives inside
+              the swaying wrapper so bugs ride the canopy instead of hanging in the air beside it. */}
           <div
             className="absolute inset-x-0"
             style={{ bottom: 40, top: 8, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
           >
-            <img
+            <div
               ref={treeRef}
-              src={treeSrc}
-              alt={dried ? `${STAGE_NAMES[stage]} (withered)` : STAGE_NAMES[stage]}
               style={{
-                height: STAGE_HEIGHTS[stage],
-                width: 'auto',
-                imageRendering: 'pixelated',
+                position: 'relative',
+                width: treeW,
+                height: treeH,
                 transformOrigin: 'bottom center',
                 willChange: 'transform',
               }}
-            />
+            >
+              <img
+                src={treeSrc}
+                alt={infested ? `${STAGE_NAMES[stage]} (infested)` : STAGE_NAMES[stage]}
+                style={{ width: '100%', height: '100%', imageRendering: 'pixelated' }}
+              />
+              <Pests pests={pests} width={treeW} height={treeH} />
+            </div>
           </div>
         </div>
 
         {/* Stage · weather badge — overlay, top-left (kept at fixed size, outside the scaled stage).
-            Uses a warm light background in every state so the dark 🥀 glyph stays readable. */}
+            Uses a warm light background in every state so the dark 🐛 glyph stays readable. */}
         <div
           className={`
             absolute top-2 left-2 z-10 flex items-center gap-1 rounded-full bg-amber-100/85 px-2.5 py-1 text-xs
             font-medium text-amber-950 backdrop-blur-sm
           `}
         >
-          {STAGE_NAMES[stage]} · {dried ? '🥀' : '🌳'} · {WEATHER_EMOJI[weather]}
+          {STAGE_NAMES[stage]} · {infested ? '🐛' : '🌳'} · {WEATHER_EMOJI[weather]}
         </div>
 
         {/* Info toggle — overlay, top-right (kept at fixed size, outside the scaled stage) */}
@@ -241,10 +271,14 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
           >
             debug
           </div>
-          {/* Weather formula breakdown */}
+          {/* Weather formula breakdown. The label column is sized to its content rather than half the
+              panel, so the value column has room — and `leading-4` + `min-h-8` on the two
+              variable-length rows below reserves two lines each, keeping the panel (and everything
+              under it) from shifting as the text grows or shrinks with stage/cause changes. */}
           <div
             className={`
-              mb-2 grid grid-cols-2 gap-x-4 gap-y-0.5 rounded bg-orange-100/60 px-2 py-1.5 font-mono text-[11px]
+              mb-2 grid grid-cols-[4.5rem_1fr] gap-x-3 gap-y-0.5 rounded bg-orange-100/60 px-2 py-1.5 font-mono
+              text-[11px] leading-4
               dark:bg-orange-900/20
             `}
           >
@@ -320,25 +354,46 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
                 dark:text-gray-400
               `}
             >
-              dried
+              pests
             </span>
             <span
               className={`
-                font-semibold text-orange-700
+                min-h-8 font-semibold text-orange-700
                 dark:text-orange-300
               `}
             >
               {player.total} games · {computed.breakdown.winRate.toFixed(1)}% wr →{' '}
-              {computed.dried ? '🥀 withered' : '🌳 healthy'}
+              {computed.causes.length > 0
+                ? `🐛 ${computed.causes.join(' + ')} (${computed.pests.length})`
+                : '🌳 healthy'}
+            </span>
+            <span
+              className={`
+                text-gray-500
+                dark:text-gray-400
+              `}
+            >
+              swarm
+            </span>
+            {/* Reflects debug overrides and names the species actually rendered — small stages cap the
+                bug count, so a species can be dropped even though its cause is active. */}
+            <span
+              className={`
+                min-h-8 font-semibold text-orange-700
+                dark:text-orange-300
+              `}
+            >
+              {pests.length > 0
+                ? `${pests.length} bug${pests.length === 1 ? '' : 's'} · ${swarmSummary}${
+                    droppedKinds.length > 0 ? ` · capped, no ${droppedKinds.join('/')}` : ''
+                  }`
+                : '—'}
             </span>
           </div>
 
-          <div
-            className={`
-              grid grid-cols-1 gap-2
-              sm:grid-cols-2 sm:gap-x-4
-            `}
-          >
+          {/* One control per row. Side-by-side, each dropdown only got ~90px once the label and
+              steppers were subtracted, which truncated values like "4 — Young Tree" to "4 — Yo…". */}
+          <div className="grid grid-cols-1 gap-2">
             <DebugSelect
               label="Stage"
               value={debugStage != null ? String(debugStage) : ''}
@@ -373,17 +428,9 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
                 })),
               ]}
             />
-            <DebugSelect
-              label="Dried"
-              value={debugDried == null ? '' : debugDried ? '1' : '0'}
-              onChange={(v) => setDebugDried(v === '' ? null : v === '1')}
-              onStep={(dir) => setDebugDried(dir === 1)}
-              options={[
-                { value: '', label: `auto (${computed.dried ? '🥀 withered' : '🌳 healthy'})` },
-                { value: '1', label: '🥀 withered' },
-                { value: '0', label: '🌳 healthy' },
-              ]}
-            />
+            {/* Causes are toggled independently so every combination — and the firewasp escalation
+                at two or more — is reachable. */}
+            <DebugCauses label="Pests" value={debugPests} computed={computed.causes} onChange={setDebugPests} />
           </div>
         </div>
       )}
@@ -500,7 +547,7 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
               dark:text-gray-300
             `}
           >
-            Wither — any condition triggers 🥀
+            Pests — each condition draws its own bug 🐛
           </p>
           <table className="w-full">
             <thead>
@@ -510,14 +557,35 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
                   dark:text-gray-500
                 `}
               >
+                <th className="pb-1 font-normal">Bug</th>
                 <th className="pb-1 font-normal">Condition</th>
                 <th className="pb-1 font-normal">Trigger</th>
               </tr>
             </thead>
             <tbody>
+              {PEST_ROWS.map(({ cause, condition, trigger }) => (
+                <tr
+                  key={cause}
+                  className={
+                    computed.causes.includes(cause)
+                      ? `
+                        font-semibold text-gray-800
+                        dark:text-gray-100
+                      `
+                      : `
+                        text-gray-500
+                        dark:text-gray-400
+                      `
+                  }
+                >
+                  <td className="py-0.5">{PEST_NAMES[PEST_CAUSE_KIND[cause]]}</td>
+                  <td className="py-0.5">{condition}</td>
+                  <td className="py-0.5">{trigger}</td>
+                </tr>
+              ))}
               <tr
                 className={
-                  player.total >= DRIED_MIN_GAMES && computed.breakdown.winRate < DRIED_WINRATE_MAX
+                  computed.causes.length >= PEST_WASP_MIN_CAUSES
                     ? `
                       font-semibold text-gray-800
                       dark:text-gray-100
@@ -528,42 +596,9 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
                     `
                 }
               >
-                <td className="py-0.5">Low win rate</td>
-                <td className="py-0.5">
-                  {DRIED_MIN_GAMES}+ games, &lt;{DRIED_WINRATE_MAX}% win rate
-                </td>
-              </tr>
-              <tr
-                className={
-                  computed.breakdown.streakValue <= -DRIED_ICE_STREAK_MIN
-                    ? `
-                      font-semibold text-gray-800
-                      dark:text-gray-100
-                    `
-                    : `
-                      text-gray-500
-                      dark:text-gray-400
-                    `
-                }
-              >
-                <td className="py-0.5">Ice streak</td>
-                <td className="py-0.5">{DRIED_ICE_STREAK_MIN}+ losses in a row</td>
-              </tr>
-              <tr
-                className={
-                  player.is_decaying
-                    ? `
-                      font-semibold text-gray-800
-                      dark:text-gray-100
-                    `
-                    : `
-                      text-gray-500
-                      dark:text-gray-400
-                    `
-                }
-              >
-                <td className="py-0.5">Neglect</td>
-                <td className="py-0.5">Inactive for too long</td>
+                <td className="py-0.5">{PEST_NAMES.wasp}</td>
+                <td className="py-0.5">Swarm</td>
+                <td className="py-0.5">{PEST_WASP_MIN_CAUSES}+ conditions at once</td>
               </tr>
             </tbody>
           </table>

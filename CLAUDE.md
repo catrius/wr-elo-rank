@@ -52,7 +52,7 @@ DFS in `src/utils/suggestTeams.ts` — samples up to 10 available players, tries
 
 ### Player Garden
 
-`PlayerGarden` (shown on `PlayerPage`) is an animated pixel-art tree + weather scene visualizing a player's form. State is computed by `src/utils/garden.ts` and rendered against constants in `src/constants/garden.ts`; weather overlays live in `src/components/garden/`. Tree stage maps to season wins; weather maps to a composite health score (streak + recent form + win rate); the tree "withers" (dried sprite) on poor records, long ice streaks, or Elo decay.
+`PlayerGarden` (shown on `PlayerPage`) is an animated pixel-art tree + weather scene visualizing a player's form. State is computed by `src/utils/garden.ts` and rendered against constants in `src/constants/garden.ts`; weather overlays live in `src/components/garden/`. Tree stage maps to season wins; weather maps to a composite health score (streak + recent form + win rate); poor records, long ice streaks, or Elo decay infest the tree with **pests** (bugs crawling on the canopy) rather than withering it. Aseprite sources for the pest sprites live in `assets/garden/pests/` (sources only, not served — see the README there for the grid layout and re-export steps).
 
 ## Routing (src/main.tsx)
 
@@ -147,11 +147,12 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 
 ### garden.ts
 
-- Types: `GardenStage` (1–8), `WeatherState` (sunny/cloudy/rainy/stormy/blizzard), `WeatherBreakdown`, `GardenState`.
-- `isDried(seasonTotal, winRate, streak, isDecaying)` — Withers if (≥20 games and <45% WR), OR ice streak ≥5, OR decaying (`DRIED_MIN_GAMES`, `DRIED_WINRATE_MAX`, `DRIED_ICE_STREAK_MIN`).
+- Types: `GardenStage` (1–8), `WeatherState` (sunny/cloudy/rainy/stormy/blizzard), `PestKind` (locust/butterfly/beetle/wasp), `PestCause` (winrate/ice/decay), `Pest`, `WeatherBreakdown`, `GardenState`.
+- `getPestCauses(seasonTotal, winRate, streak, isDecaying)` — Returns every active `PestCause`: `winrate` (≥20 games and <45% WR), `ice` (ice streak ≥5), `decay` (`PEST_MIN_GAMES`, `PEST_WINRATE_MAX`, `PEST_ICE_STREAK_MIN`).
+- `buildPests(causes, stage, playerId)` — Turns causes into placed `Pest[]`. Each cause maps to a species via `PEST_CAUSE_KIND`; `PEST_WASP_MIN_CAUSES` (2) or more causes adds firewasps. Count scales with stage capacity × severity; positions use golden-angle placement in the canopy ellipse, spun by a deterministic per-player seed so a player's swarm is stable across renders. Each pest also carries a per-bug `seed` that `Pests` expands into its own motion path. Note small stages cap the bug count, so a species can be dropped even when its cause is active.
 - `getGrowthStage(seasonWins)` — Maps season wins to a stage via `STAGE_THRESHOLDS` (calibrated from 2026 season distributions).
 - `getWeatherState(streak, recentMatches, playerId, seasonWins, seasonTotal)` — Computes `healthScore = streakScore*0.35 + recentForm*0.40 + winRate*0.25` and buckets it (sunny≥80 / cloudy≥60 / rainy≥40 / stormy≥20 / blizzard). Returns weather + breakdown.
-- `computeGardenState(player, matches, playerId)` — Combines the above into `{ stage, weather, breakdown, dried }`.
+- `computeGardenState(player, matches, playerId)` — Combines the above into `{ stage, weather, breakdown, causes, pests }`.
 
 ## Components (src/components/)
 
@@ -186,7 +187,7 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 - **SeasonSpotlight** — 4-panel grid for season pages: Good Chemistry (top 5 duos), Bad Chemistry (bottom 5 duos), Rank Improved (top 5 climbers), Rank Dropped (top 5 fallers, vs `prevPlayers`). Props: `players`, `matches`, `prevPlayers`. Internal `DuoList`, `RankList`.
 - **Pairings** — CRUD for player pairings. Inline add/edit forms, prevents self-pairing. Writes directly to Supabase `pairing` table (insert/update/delete), refreshes context after each. Internal `PlayerSelect`. Uses GameDataContext, DisplayNameContext.
 - **FeedbackBox** — Feature-request/feedback board. Reads/writes `feedback` + `feedback_vote`: insert feedback, toggle vote, edit own text, admin toggles status (open/done/joke). Status filter tabs, rc-pagination (PAGE_SIZE 10), markdown rendering (react-markdown + remark-gfm). Author names respect the ingame toggle via `displayName`. Uses AuthContext, DisplayNameContext, GameDataContext.
-- **PlayerGarden** — Animated pixel-art garden visualizing a player's form (tree stage + weather). Computes state via `computeGardenState` (memoized); `ResizeObserver` scales a fixed 480×320 design canvas as one unit; `requestAnimationFrame` tree sway (summed sine waves). Weather → overlay: sunny→`SunRays` + `Birds`, cloudy/stormy→`Clouds` (dark when stormy), rainy→`RainDrops`, stormy→`RainDrops heavy` + `Lightning`, blizzard→`Blizzard`. Info panel + admin-only debug panel (`DebugSelect` overrides). Props: `player`, `matches`, `playerId`, `isAdmin?`.
+- **PlayerGarden** — Animated pixel-art garden visualizing a player's form (tree stage + weather + pests). Computes state via `computeGardenState` (memoized); `ResizeObserver` scales a fixed 480×320 design canvas as one unit; `requestAnimationFrame` tree sway (summed sine waves) applied to a wrapper holding both the tree image and the `Pests` overlay, so bugs ride the canopy. Tree box size comes from `STAGE_HEIGHTS` × `STAGE_ASPECT` (no image measuring). Weather → overlay: sunny→`SunRays` + `Birds`, cloudy/stormy→`Clouds` (dark when stormy), rainy→`RainDrops`, stormy→`RainDrops heavy` + `Lightning`, blizzard→`Blizzard`. Info panel + admin-only debug panel (`DebugSelect` for stage/weather, `DebugCauses` for pest causes; the readout names the species actually rendered and flags any the stage's bug cap dropped). Props: `player`, `matches`, `playerId`, `isAdmin?`.
 
 ### Leaderboard sub-components (src/components/leaderboard/)
 
@@ -206,7 +207,9 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 - **RainDrops** — Rainy: falling drops (15 light / 22 heavy). Props: `heavy?`.
 - **Lightning** — Stormy: 4 SVG bolts drifting under clouds + ambient sky flash; lead bolt synced to top-left cloud.
 - **Blizzard** — Blizzard: two parallax snow layers (60 far + 18 near blurred flakes, each with its own drift) + 10 wind-streak wisps on a shared diagonal + a pulsing whiteout haze veil.
+- **Pests** — Infestation overlay (replaces the old withered-tree sprites). Renders each `Pest` from `PEST_SPRITES` as a stepped `background-position` sprite strip (Idle/Side rows of the Foozle pack, in `public/garden/pests/`). Each bug gets its own generated wander keyframes — 5 uneven waypoints + rotation, expanded from `pest.seed` — with per-species range/speed/tilt from `PEST_MOTION` (beetles barely crawl, butterflies roam widest, wasps dart), so no two move alike. Sizes bugs relative to the tree's height (floor of 20px, since smaller stops reading as a bug) and mirrors each one to face in toward the trunk. Props: `pests`, `width`, `height`.
 - **DebugSelect** — Admin debug dropdown (custom `<select>` replacement) with optional up/down steppers. Props: `label`, `value`, `options`, `onChange`, `onStep?`.
+- **DebugCauses** — Admin debug control for pests. Independent per-cause checkboxes (not a dropdown) since pest state is a `PestCause[]` set — makes every combination reachable, including the 2+-cause firewasp escalation. An `auto` button toggles between following the computed causes (`null`) and an explicit override; unchecking everything is an explicit healthy tree (`[]`). Props: `label`, `value`, `computed`, `onChange`.
 
 ### Global UI
 

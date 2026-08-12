@@ -112,28 +112,31 @@ export default function DebugSelect({
           </div>
         )}
       </div>
+      {/* Steppers sit side-by-side rather than stacked: two comfortably clickable 24px buttons stay the
+          same height as the dropdown, whereas stacking them would double the control's height. */}
       {onStep && (
         <div
           className={`
-            flex shrink-0 flex-col overflow-hidden rounded border border-gray-300
-            dark:border-gray-600
+            flex shrink-0 divide-x divide-gray-300 overflow-hidden rounded border border-gray-300
+            dark:divide-gray-600 dark:border-gray-600
           `}
         >
-          {([1, -1] as const).map((dir) => (
+          {([-1, 1] as const).map((dir) => (
             <button
               key={dir}
               type="button"
               onClick={() => onStep(dir)}
               aria-label={dir === 1 ? 'increase' : 'decrease'}
               className={`
-                flex h-3 w-5 cursor-pointer items-center justify-center bg-white text-gray-500
+                flex h-6 w-6 cursor-pointer items-center justify-center bg-white text-gray-500
                 hover:bg-gray-100
                 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700
               `}
             >
+              {/* Base glyph is a chevron-down; rotate it to point the way each button steps */}
               <svg
                 className={`
-                  h-2.5 w-2.5
+                  h-3.5 w-3.5
                   ${dir === 1 ? 'rotate-180' : ''}
                 `}
                 viewBox="0 0 20 20"

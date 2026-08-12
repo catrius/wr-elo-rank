@@ -1,4 +1,4 @@
-import type { GardenStage, WeatherState } from '@/utils/garden.ts';
+import type { GardenStage, PestCause, PestKind, WeatherState } from '@/utils/garden.ts';
 
 export const STAGE_NAMES: Record<GardenStage, string> = {
   1: 'Seed',
@@ -114,3 +114,49 @@ export const WEATHER_ROWS: { weather: WeatherState; score: string; description: 
 // dimensions, then a single transform scales the whole stage to whatever width the card renders at.
 export const DESIGN_W = 480;
 export const DESIGN_H = 320;
+
+// Width/height ratio of each stage sprite. The tree renders at STAGE_HEIGHTS with width derived from
+// this, so the pest overlay can be sized to exactly the tree's box without measuring the loaded image.
+export const STAGE_ASPECT: Record<GardenStage, number> = {
+  1: 168 / 152,
+  2: 28 / 24,
+  3: 256 / 208,
+  4: 128 / 152,
+  5: 96 / 128,
+  6: 184 / 252,
+  7: 192 / 348,
+  8: 180 / 332,
+};
+
+// Pest sprite strips (Foozle "Spire" flying enemy pack, Idle/Side rows extracted to a single row each).
+// `faces` is the direction the artwork points at rest — a bug placed on the far side of the trunk is
+// mirrored so it always looks in toward the tree. `rel` scales a kind against the shared pest size.
+export const PEST_SPRITES: Record<
+  PestKind,
+  { src: string; frames: number; cellW: number; cellH: number; faces: 'left' | 'right'; rel: number }
+> = {
+  locust: { src: '/garden/pests/locust.png', frames: 12, cellW: 40, cellH: 47, faces: 'right', rel: 1 },
+  butterfly: { src: '/garden/pests/butterfly.png', frames: 6, cellW: 38, cellH: 56, faces: 'right', rel: 0.95 },
+  beetle: { src: '/garden/pests/beetle.png', frames: 8, cellW: 48, cellH: 42, faces: 'left', rel: 1.05 },
+  wasp: { src: '/garden/pests/wasp.png', frames: 12, cellW: 56, cellH: 54, faces: 'left', rel: 1.25 },
+};
+
+// Each wither condition attracts its own species, so the swarm reads as a diagnosis
+export const PEST_CAUSE_KIND: Record<PestCause, PestKind> = {
+  winrate: 'locust',
+  ice: 'butterfly',
+  decay: 'beetle',
+};
+
+export const PEST_NAMES: Record<PestKind, string> = {
+  locust: 'Locusts',
+  butterfly: 'Void butterflies',
+  beetle: 'Clampbeetles',
+  wasp: 'Firewasps',
+};
+
+export const PEST_ROWS: { cause: PestCause; condition: string; trigger: string }[] = [
+  { cause: 'winrate', condition: 'Low win rate', trigger: '20+ games, <45% win rate' },
+  { cause: 'ice', condition: 'Ice streak', trigger: '5+ losses in a row' },
+  { cause: 'decay', condition: 'Neglect', trigger: 'Inactive for too long' },
+];
