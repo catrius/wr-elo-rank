@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Player, Match } from '@/types/common.ts';
 import {
+  buildFlora,
   buildPests,
   computeGardenState,
   PEST_WASP_MIN_CAUSES,
@@ -10,8 +11,10 @@ import {
   type WeatherState,
 } from '@/utils/garden.ts';
 import {
+  depthToY,
   DESIGN_H,
   DESIGN_W,
+  GROUND_LIGHT,
   PEST_CAUSE_KIND,
   PEST_NAMES,
   PEST_ROWS,
@@ -23,6 +26,7 @@ import {
   STAGE_NAMES,
   STAGE_ROWS,
   SWAY_DURATION,
+  TREE_DEPTH,
   WEATHER_EMOJI,
   WEATHER_ROWS,
   WEATHER_SWAY_MULT,
@@ -33,6 +37,8 @@ import Blizzard from '@/components/garden/Blizzard.tsx';
 import Clouds from '@/components/garden/Clouds.tsx';
 import DebugCauses from '@/components/garden/DebugCauses.tsx';
 import DebugSelect from '@/components/garden/DebugSelect.tsx';
+import Flora from '@/components/garden/Flora.tsx';
+import Lawn from '@/components/garden/Lawn.tsx';
 import Lightning from '@/components/garden/Lightning.tsx';
 import Pests from '@/components/garden/Pests.tsx';
 import RainDrops from '@/components/garden/RainDrops.tsx';
@@ -72,6 +78,14 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
     [debugPests, debugStage, causes, stage, playerId, computed.pests],
   );
   const infested = pests.length > 0;
+  // Flora responds to stage, weather, and infestation, so any of the three debug overrides rebuilds it
+  const plants = useMemo(
+    () =>
+      debugPests || debugStage != null || debugWeather != null
+        ? buildFlora(stage, weather, infested, playerId)
+        : computed.plants,
+    [debugPests, debugStage, debugWeather, stage, weather, infested, playerId, computed.plants],
+  );
 
   // Debug readout: what the swarm actually contains, and which species the stage's cap squeezed out
   const swarmSummary = useMemo(() => {
@@ -91,7 +105,11 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
   // Pest positions are fractions of the tree's rendered box, derived from the sprite's aspect ratio
   const treeH = STAGE_HEIGHTS[stage];
   const treeW = treeH * STAGE_ASPECT[stage];
+  // The trunk's base sits at the tree's own depth on the lawn — the same mapping the flora uses, so
+  // plants at a nearer depth reliably read as being in front of it
+  const treeBaseY = depthToY(TREE_DEPTH);
 
+  const groundLight = GROUND_LIGHT[weather];
   const [skyLight, skyDark] = SKY_COLORS[weather];
   const isNight = SKY_IMAGE[weather] === 'night';
   const tintColor = isNight ? skyDark : skyLight;
@@ -174,45 +192,55 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
           )}
           {weather === 'blizzard' && <Blizzard />}
 
-          {/* Ground — grass/dirt tile used directly, tiled horizontally at 2× pixel scale */}
+          {/* Everything standing on the ground shares one lighting filter, so the bed can't end up lit
+              like noon under a night sky. The tree lives inside it too — it's part of the scene, not a
+              separate object floating over it. */}
           <div
-            className="absolute inset-x-0 bottom-0"
-            style={{
-              height: 48,
-              backgroundImage: 'url(/garden/ground.png)',
-              backgroundRepeat: 'repeat-x',
-              backgroundPosition: 'top left',
-              backgroundSize: '48px 48px',
-              imageRendering: 'pixelated',
-              borderRadius: '0 0 16px 16px',
-            }}
-          />
-
-          {/* Shadow cast on the grass at the base of the trunk */}
-          <div
-            className="absolute"
-            style={{
-              bottom: 36,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: SHADOW_WIDTHS[stage],
-              height: 11,
-              background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.38), rgba(0,0,0,0) 70%)',
-              borderRadius: '50%',
-              pointerEvents: 'none',
-            }}
-          />
-
-          {/* Tree — baseline sunk into the grass so it reads as planted. The pest overlay lives inside
-              the swaying wrapper so bugs ride the canopy instead of hanging in the air beside it. */}
-          <div
-            className="absolute inset-x-0"
-            style={{ bottom: 40, top: 8, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+            className="absolute inset-0"
+            style={{ filter: `brightness(${groundLight.brightness}) saturate(${groundLight.sat})` }}
           >
+            {/* Lawn + backdrop dressing (hedge, trellises) */}
+            <Lawn />
+
+            {/* Flower beds behind the tree — drawn before it, so the tree overlaps them */}
+            <Flora plants={plants} layer="back" />
+
+            {/* Bed of tilled soil the tree is planted in, with its shadow cast across it */}
+            <div
+              className="absolute"
+              style={{
+                left: '50%',
+                top: treeBaseY - 11,
+                transform: 'translateX(-50%)',
+                width: SHADOW_WIDTHS[stage] * 1.5 + 40,
+                height: 20,
+                background: 'radial-gradient(ellipse at center, #92553c 60%, #74403933 78%, transparent 82%)',
+                borderRadius: '50%',
+              }}
+            />
+            <div
+              className="absolute"
+              style={{
+                top: treeBaseY - 9,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: SHADOW_WIDTHS[stage],
+                height: 11,
+                background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.38), rgba(0,0,0,0) 70%)',
+                borderRadius: '50%',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Tree — planted at TREE_DEPTH along the lawn rather than on the card's bottom edge, so the
+                beds can sit both behind and in front of it. The pest overlay lives inside the swaying
+                wrapper so bugs ride the canopy instead of hanging in the air beside it. */}
             <div
               ref={treeRef}
+              className="absolute"
               style={{
-                position: 'relative',
+                left: DESIGN_W / 2 - treeW / 2,
+                top: treeBaseY - treeH,
                 width: treeW,
                 height: treeH,
                 transformOrigin: 'bottom center',
@@ -226,6 +254,9 @@ export default function PlayerGarden({ player, matches, playerId, isAdmin = fals
               />
               <Pests pests={pests} width={treeW} height={treeH} />
             </div>
+
+            {/* Flower beds nearer than the tree — drawn last, over it */}
+            <Flora plants={plants} layer="front" />
           </div>
         </div>
 

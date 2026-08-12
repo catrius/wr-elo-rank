@@ -1,4 +1,4 @@
-import type { GardenStage, PestCause, PestKind, WeatherState } from '@/utils/garden.ts';
+import type { FloraKind, GardenStage, PestCause, PestKind, WeatherState } from '@/utils/garden.ts';
 
 export const STAGE_NAMES: Record<GardenStage, string> = {
   1: 'Seed',
@@ -25,7 +25,10 @@ export const SKY_COLORS: Record<WeatherState, [string, string]> = {
   cloudy: ['#e2e8f0', '#334155'],
   rainy: ['#bfdbfe', '#1e3a5f'],
   stormy: ['#94a3b8', '#0f172a'],
-  blizzard: ['#9ca3af', '#1e293b'],
+  // Blizzard's night tone is a pale slate rather than a near-black like stormy's: it's the only weather
+  // whose tint is meant to *lift* the night sky into a snow haze, not darken it further. With a darker
+  // tone the heavy alpha below just deepened the starfield, which read as plain night, not a whiteout.
+  blizzard: ['#9ca3af', '#7c8ba1'],
 };
 
 // 2-digit hex alpha for the weather tint layered over the sky image — heavier for bad weather
@@ -33,8 +36,8 @@ export const WEATHER_TINT: Record<WeatherState, string> = {
   sunny: '33',
   cloudy: '4d',
   rainy: '73',
-  stormy: 'a6',
-  blizzard: '80',
+  stormy: '8c',
+  blizzard: 'a6',
 };
 
 // Which painted sky each weather uses — good form gets the day sky, bad form the night sky
@@ -127,6 +130,107 @@ export const STAGE_ASPECT: Record<GardenStage, number> = {
   7: 192 / 348,
   8: 180 / 332,
 };
+
+// ── Garden bed geometry ────────────────────────────────────────────────────────────────────────
+// The scene is a lawn receding to a horizon rather than a flat 48px strip, so flora can be placed in
+// depth. `lawn.png` is baked at exactly DESIGN_W × LAWN_H (see assets/garden/lawn/generate.py) and
+// lands 1:1 on the stage; LAWN_TOP is therefore just the design height minus the slab.
+export const LAWN_H = 112;
+export const LAWN_TOP = DESIGN_H - LAWN_H;
+// Where along the lawn's depth the tree is planted. Everything with a smaller depth draws behind it.
+export const TREE_DEPTH = 0.4;
+// A few px of overhang so a plant's roots sit *in* the grass rather than balancing on the horizon line
+export const LAWN_LIP = 6;
+
+// Maps a 0–1 depth to its baseline y in design px. Plants at depth 1 hang slightly off the bottom
+// edge, which crops them and sells them as being nearest the viewer.
+export function depthToY(depth: number): number {
+  return LAWN_TOP + LAWN_LIP + depth * (DESIGN_H - LAWN_TOP + 8);
+}
+
+// Flora sprites (Pixel Art Flower Pack). `h` is the display height in design px at full depth —
+// authored per species rather than derived, since a lily should tower over a daisy cluster. Widths
+// come from the sprite's own aspect ratio at render time.
+export const FLORA_SPRITES: Record<FloraKind, { src: string; aspect: number; h: number }> = {
+  daisy: { src: '/garden/flora/daisy-blue.png', aspect: 17 / 30, h: 18 },
+  aster: { src: '/garden/flora/aster-purple.png', aspect: 17 / 32, h: 19 },
+  poppy: { src: '/garden/flora/poppy-yellow.png', aspect: 15 / 29, h: 17 },
+  lily: { src: '/garden/flora/lily-orange.png', aspect: 28 / 43, h: 26 },
+  clusterPink: { src: '/garden/flora/cluster-pink.png', aspect: 29 / 18, h: 13 },
+  clusterYellow: { src: '/garden/flora/cluster-yellow.png', aspect: 29 / 17, h: 13 },
+  bush: { src: '/garden/flora/bush-green.png', aspect: 45 / 30, h: 26 },
+  bushDry: { src: '/garden/flora/bush-dry.png', aspect: 45 / 30, h: 26 },
+  bed: { src: '/garden/flora/bed-pink.png', aspect: 68 / 27, h: 24 },
+};
+
+// The species a healthy garden draws from. Repeats act as weights — small blooms should outnumber
+// the bulky bushes and beds, or the lawn reads as overgrown rather than planted.
+export const FLORA_POOL: FloraKind[] = [
+  'daisy',
+  'daisy',
+  'aster',
+  'aster',
+  'poppy',
+  'poppy',
+  'clusterPink',
+  'clusterYellow',
+  'lily',
+  'bush',
+  'bed',
+];
+
+// How many plants a garden holds at each stage — the bed fills in as the tree grows, so progress
+// shows across the whole scene instead of only in the tree's height
+export const FLORA_COUNT_BY_STAGE: Record<GardenStage, number> = {
+  1: 5,
+  2: 8,
+  3: 11,
+  4: 14,
+  5: 17,
+  6: 20,
+  7: 23,
+  8: 26,
+};
+
+// Bad weather thins the beds — blooms close up and die back, so the lawn empties out as form drops
+export const FLORA_WEATHER_MULT: Record<WeatherState, number> = {
+  sunny: 1,
+  cloudy: 0.85,
+  rainy: 0.7,
+  stormy: 0.5,
+  blizzard: 0.3,
+};
+
+// Fraction of bushes that dry out while the tree is infested — the pests spread past the canopy
+export const FLORA_DRY_SHARE = 0.6;
+
+// Ground lighting per weather, as a CSS filter applied to the whole garden bed (lawn, dressing, and
+// flora together). Without it the lawn stayed in full daylight under the night skies, and the scene
+// read as two unrelated halves. Kept as one filter over the whole bed so nothing lights differently
+// than what's next to it. `sat` also drains colour, since the beds should look cold, not just dark.
+export const GROUND_LIGHT: Record<WeatherState, { brightness: number; sat: number }> = {
+  sunny: { brightness: 1, sat: 1 },
+  cloudy: { brightness: 0.92, sat: 0.94 },
+  rainy: { brightness: 0.82, sat: 0.85 },
+  stormy: { brightness: 0.68, sat: 0.7 },
+  // Brighter than stormy despite being the worse state, to match its sky: blizzard's tint lifts the
+  // night sky into a pale haze (see SKY_COLORS), so a darker ground would sit oddly under a lighter
+  // sky. The heavy desaturation is what carries "frozen" here, not the brightness.
+  blizzard: { brightness: 0.78, sat: 0.45 },
+};
+
+// Static set dressing: climbing-rose trellises standing at the horizon, giving the garden a cultivated
+// backdrop and a bit of vertical framing. Positions are design px; `bottom` is measured up from the
+// design floor. Deliberately all at the horizon — potted plants in the near corners were tried and cut,
+// since the card's edge crops them and a half-pot reads as pasted onto the scene rather than in it.
+export const GARDEN_PROPS: { src: string; aspect: number; h: number; left: number; bottom: number; dim: number }[] = [
+  { src: '/garden/flora/trellis-warm.png', aspect: 58 / 104, h: 88, left: 20, bottom: LAWN_H - 6, dim: 0.8 },
+  { src: '/garden/flora/trellis-pink.png', aspect: 58 / 104, h: 80, left: 400, bottom: LAWN_H - 6, dim: 0.8 },
+];
+
+// Hedge running along the horizon, tiled from the bush sprite at a dimmed, distant scale
+export const HEDGE_H = 16;
+export const HEDGE_DIM = 0.68;
 
 // Pest sprite strips (Foozle "Spire" flying enemy pack, Idle/Side rows extracted to a single row each).
 // `faces` is the direction the artwork points at rest — a bug placed on the far side of the trunk is

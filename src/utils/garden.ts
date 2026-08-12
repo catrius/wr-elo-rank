@@ -1,4 +1,11 @@
-import { PEST_CAUSE_KIND } from '@/constants/garden.ts';
+import {
+  FLORA_COUNT_BY_STAGE,
+  FLORA_DRY_SHARE,
+  FLORA_POOL,
+  FLORA_WEATHER_MULT,
+  PEST_CAUSE_KIND,
+  TREE_DEPTH,
+} from '@/constants/garden.ts';
 import type { Player, Match } from '@/types/common.ts';
 import { computeStreaks, type Streak } from '@/utils/streaks.ts';
 
@@ -6,6 +13,27 @@ export type GardenStage = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type WeatherState = 'sunny' | 'cloudy' | 'rainy' | 'stormy' | 'blizzard';
 export type PestKind = 'locust' | 'butterfly' | 'beetle' | 'wasp';
 export type PestCause = 'winrate' | 'ice' | 'decay';
+export type FloraKind =
+  | 'daisy'
+  | 'aster'
+  | 'poppy'
+  | 'lily'
+  | 'clusterPink'
+  | 'clusterYellow'
+  | 'bush'
+  | 'bushDry'
+  | 'bed';
+
+// One plant on the lawn. `x` is a fraction of the scene width; `depth` is 0 (at the horizon) to 1
+// (nearest the viewer) and drives the plant's size, brightness, baseline, and whether it draws in
+// front of the tree — a single value standing in for the whole perspective.
+export interface Plant {
+  kind: FloraKind;
+  x: number;
+  depth: number;
+  // Mirrored horizontally, so a repeated species doesn't read as a copy-paste
+  flipped: boolean;
+}
 
 // A pest on the canopy: which species, and where it sits in the tree's box (0–1 of the sprite's
 // width/height, origin top-left) so placement scales with the stage sprite. `seed` is a stable 0–1
@@ -34,6 +62,7 @@ export interface GardenState {
   breakdown: WeatherBreakdown;
   causes: PestCause[];
   pests: Pest[];
+  plants: Plant[];
 }
 
 // A tree gets infested — bugs crawling over an otherwise healthy canopy — for the high-volume grinder:
@@ -132,6 +161,42 @@ export function buildPests(causes: PestCause[], stage: GardenStage, playerId: nu
   });
 }
 
+// Flora is spread across the lawn's width in even columns with a jitter inside each, rather than at
+// fully random x. Pure randomness clumped plants into clusters and left bald patches, which read as a
+// bug; columns guarantee coverage while the jitter keeps the row from looking planted on a grid.
+// A margin keeps the very center clear so plants don't grow through the trunk.
+const TRUNK_CLEARANCE = 0.06;
+
+export function buildFlora(stage: GardenStage, weather: WeatherState, infested: boolean, playerId: number): Plant[] {
+  const total = Math.round(FLORA_COUNT_BY_STAGE[stage] * FLORA_WEATHER_MULT[weather]);
+  if (total <= 0) return [];
+
+  return Array.from({ length: total }, (_, i) => {
+    // Offset each stream by a different prime so a plant's column, species, and depth are independent
+    const sx = hashSeed(playerId * 97 + i * 13 + 1);
+    const sk = hashSeed(playerId * 31 + i * 7 + 5);
+    const sd = hashSeed(playerId * 57 + i * 11 + 3);
+    const sf = hashSeed(playerId * 71 + i * 17 + 9);
+
+    const kind = FLORA_POOL[Math.floor(sk * FLORA_POOL.length)];
+    const depth = sd;
+    const raw = (i + sx) / total;
+    // Plants sharing the tree's depth would grow through the trunk, so squeeze each half of the
+    // lawn outward around a clear center gap. Plants clearly in front of or behind the tree pass
+    // through untouched — overlapping the trunk at a different depth is what sells the perspective.
+    const nearTree = Math.abs(depth - TREE_DEPTH) < 0.12;
+    const x = nearTree ? raw * (1 - 2 * TRUNK_CLEARANCE) + (raw < 0.5 ? 0 : 2 * TRUNK_CLEARANCE) : raw;
+
+    return {
+      // Bushes dry out on an infested tree — the blight isn't contained to the canopy
+      kind: infested && kind === 'bush' && sf < FLORA_DRY_SHARE ? 'bushDry' : kind,
+      x: clamp(x, 0.01, 0.99),
+      depth,
+      flipped: sf > 0.5,
+    };
+  });
+}
+
 export function getWeatherState(
   streak: Streak | null,
   recentMatches: Match[],
@@ -185,5 +250,7 @@ export function computeGardenState(player: Player, matches: Match[], playerId: n
   const { weather, breakdown } = getWeatherState(streak, completed, playerId, player.win, player.total);
   const stage = getGrowthStage(player.win);
   const causes = getPestCauses(player.total, breakdown.winRate, streak, player.is_decaying);
-  return { stage, weather, breakdown, causes, pests: buildPests(causes, stage, playerId) };
+  const pests = buildPests(causes, stage, playerId);
+  const plants = buildFlora(stage, weather, pests.length > 0, playerId);
+  return { stage, weather, breakdown, causes, pests, plants };
 }
