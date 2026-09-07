@@ -191,6 +191,7 @@ export default function UserPage() {
   const [player, setPlayer] = useState<Player | null>(null);
   const [playerLoading, setPlayerLoading] = useState(true);
   const [name, setName] = useState('');
+  const [ingame, setIngame] = useState('');
   const [saving, setSaving] = useState(false);
   const [pendingAvatar, setPendingAvatar] = useState<File | null>(null);
   const [pendingAvatarPreview, setPendingAvatarPreview] = useState<string | null>(null);
@@ -207,6 +208,7 @@ export default function UserPage() {
     if (data) {
       setPlayer(data);
       setName(data.name);
+      setIngame(data.ingame || '');
     }
     setPlayerLoading(false);
   }, [user?.email]);
@@ -263,14 +265,18 @@ export default function UserPage() {
     [player],
   );
 
-  const hasChanges = player && name.trim() !== '' && (name.trim() !== player.name || pendingAvatar);
+  const hasChanges =
+    player &&
+    name.trim() !== '' &&
+    (name.trim() !== player.name || ingame.trim() !== (player.ingame || '') || pendingAvatar);
 
   const handleSave = useCallback(async () => {
     if (!user || !player || !hasChanges) return;
     setSaving(true);
     try {
-      const updates: Record<string, string> = {};
+      const updates: Record<string, string | null> = {};
       if (name.trim() !== player.name) updates.name = name.trim();
+      if (ingame.trim() !== (player.ingame || '')) updates.ingame = ingame.trim() || null;
 
       if (pendingAvatar) {
         const blob = await upload(`avatars/${player.id}-${Date.now()}`, pendingAvatar, {
@@ -293,7 +299,7 @@ export default function UserPage() {
     } finally {
       setSaving(false);
     }
-  }, [user, player, hasChanges, name, pendingAvatar, fetchPlayer]);
+  }, [user, player, hasChanges, name, ingame, pendingAvatar, fetchPlayer]);
 
   if (loading) {
     return (
@@ -606,7 +612,16 @@ export default function UserPage() {
             >
               Ingame
             </div>
-            <div className="text-lg">{player?.ingame || '-'}</div>
+            <input
+              type="text"
+              value={ingame}
+              onChange={(e) => setIngame(e.target.value)}
+              placeholder="Optional in-game name"
+              className={`
+                min-w-0 flex-1 rounded border border-gray-300 bg-transparent px-2 py-1 text-lg
+                dark:border-gray-600
+              `}
+            />
           </div>
 
           <div className="flex items-baseline gap-8">
