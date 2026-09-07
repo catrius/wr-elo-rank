@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { meanBy } from 'es-toolkit';
 import { some } from 'es-toolkit/compat';
 import supabase from '@/lib/supabase.ts';
@@ -17,6 +17,10 @@ export default function useTeams(
   const [teamB, setTeamB] = useState<Player[]>([]);
   const [availableIds, setAvailableIds] = useState<number[]>([]);
   const [dragging, setDragging] = useState<{ player: Player; from: 'A' | 'B' } | null>(null);
+  // CRITICAL: This ref prevents auto-suggest from overwriting manually-set teams (e.g., Rematch).
+  // Must be a ref (not state) to avoid async timing issues with the useEffect below.
+  // Test Rematch buttons: NewMatch "Rematch" + MatchCard "Rematch" in history.
+  const skipAutoSuggestRef = useRef(false);
 
   const handleDragStart = useCallback(
     (player: Player, from: 'A' | 'B') => (e: any) => {
@@ -97,13 +101,19 @@ export default function useTeams(
   const lastMatch = useCallback(
     (match?: Match) => {
       const lastMatchData = match || matches?.[0];
-      const lastTeamA = players?.filter((player) => lastMatchData?.team_a_players.includes(player.id));
-      const lastTeamB = players?.filter((player) => lastMatchData?.team_b_players.includes(player.id));
+      // Preserve the original player order from the match by mapping in the match's player ID order,
+      // not the players array order (which is sorted by Elo).
+      const lastTeamA =
+        lastMatchData?.team_a_players.map((id) => players?.find((p) => p.id === id)).filter(Boolean) || [];
+      const lastTeamB =
+        lastMatchData?.team_b_players.map((id) => players?.find((p) => p.id === id)).filter(Boolean) || [];
 
+      // CRITICAL: Set this BEFORE updating availableIds to prevent the auto-suggest effect from running.
+      skipAutoSuggestRef.current = true;
       setAvailableIds([...(lastMatchData?.team_a_players || []), ...(lastMatchData?.team_b_players || [])]);
 
-      setTeamA(lastTeamA || []);
-      setTeamB(lastTeamB || []);
+      setTeamA(lastTeamA as Player[]);
+      setTeamB(lastTeamB as Player[]);
     },
     [matches, players],
   );
@@ -118,7 +128,13 @@ export default function useTeams(
     [available, pairings, players, streaks],
   );
 
+  // Auto-suggest best teams when available players change, UNLESS skipAutoSuggestRef is set
+  // (e.g., by lastMatch to preserve manually-restored teams from Rematch).
   useEffect(() => {
+    if (skipAutoSuggestRef.current) {
+      skipAutoSuggestRef.current = false;
+      return;
+    }
     suggestTeams(0);
   }, [suggestTeams]);
 

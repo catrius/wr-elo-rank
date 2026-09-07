@@ -260,6 +260,17 @@ End-of-season "Wrapped" recap. Fetches the player, the most-recent completed sea
 - ESLint allows nested ternaries and `alert()` calls
 - `useCallback` for handlers, `useMemo` for expensive computations
 
+## Testing
+
+See `TESTING.md` for critical user flows that should be manually tested after changes. Key areas with known regression risks:
+
+- **Rematch functionality** (`src/hooks/useTeams.ts`) — auto-suggest timing can break team restoration
+- **Elo decay indicators** — require 14+ whole days of inactivity
+- **Player garden pests** — complex state with multiple triggers
+- **Weekly stats** — calendar week boundary logic
+
+Before pushing changes to these areas, run through the relevant test scenarios in `TESTING.md`.
+
 ## Feedback
 
 - **Always run `npm run lint` and fix all violations before considering code changes done.** Prettier and ESLint v9 flat config enforce the style rules above — don't rely on eyeballing it.
