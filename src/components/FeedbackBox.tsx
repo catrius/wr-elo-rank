@@ -174,6 +174,17 @@ export default function FeedbackBox() {
   const handleImageUpload = useCallback(
     async (file: File, textarea: HTMLTextAreaElement | null) => {
       if (!textarea) return;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const isEdit = textarea === editTextareaRef.current;
+      const setter = isEdit ? setEditText : setText;
+      const currentValue = isEdit ? editText : text;
+
+      // Insert temporary "Uploading..." placeholder.
+      const uploadingText = 'Uploading...';
+      const tempValue = currentValue.substring(0, start) + uploadingText + currentValue.substring(end);
+      setter(tempValue);
+
       setUploading(true);
       try {
         const blob = await upload(`feedback/${Date.now()}-${file.name}`, file, {
@@ -181,14 +192,10 @@ export default function FeedbackBox() {
           handleUploadUrl: '/api/upload',
         });
         const imageMarkdown = `![${file.name}](${blob.url})`;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const isEdit = textarea === editTextareaRef.current;
-        const setter = isEdit ? setEditText : setText;
-        const currentValue = isEdit ? editText : text;
 
-        const newValue = currentValue.substring(0, start) + imageMarkdown + currentValue.substring(end);
-        setter(newValue);
+        // Replace "Uploading..." with the actual markdown.
+        const finalValue = currentValue.substring(0, start) + imageMarkdown + currentValue.substring(end);
+        setter(finalValue);
 
         // Move cursor after the inserted markdown.
         requestAnimationFrame(() => {
@@ -198,6 +205,8 @@ export default function FeedbackBox() {
         });
       } catch (error) {
         alert(`Upload failed: ${(error as Error).message}`);
+        // Restore original text on error.
+        setter(currentValue);
       } finally {
         setUploading(false);
       }
