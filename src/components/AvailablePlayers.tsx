@@ -5,6 +5,7 @@ import Avatar from '@/components/Avatar.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 import { useGameDataContext } from '@/contexts/GameDataContext.tsx';
 import { useTeamsContext } from '@/contexts/TeamsContext.tsx';
+import { isGuestPlayer } from '@/constants/guest.ts';
 
 export default function AvailablePlayers() {
   const { players, streaks } = useGameDataContext();
@@ -21,7 +22,11 @@ export default function AvailablePlayers() {
         `}
       >
         {players &&
-          orderBy(players, [(p) => displayName(p)], ['asc'])?.map((player) => (
+          orderBy(
+            players.filter((p) => !isGuestPlayer(p.id)),
+            [(p) => displayName(p)],
+            ['asc'],
+          )?.map((player) => (
             <label
               key={player.id}
               className={`

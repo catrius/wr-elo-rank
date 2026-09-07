@@ -3,6 +3,7 @@ import supabase from '@/lib/supabase.ts';
 import useSupaQuery from '@/hooks/useSupaQuery.ts';
 import type { Player, Match, Pairing, Season } from '@/types/common.ts';
 import { computeStreaks } from '@/utils/streaks.ts';
+import { GUEST_PLAYER } from '@/constants/guest.ts';
 
 export default function useGameData() {
   const getPlayersCallback = useCallback(
@@ -10,7 +11,11 @@ export default function useGameData() {
     [],
   );
   const [getPlayers, { data: playerData }] = useSupaQuery(getPlayersCallback);
-  const players = playerData as Player[] | null;
+  // Add guest player to the list
+  const players = useMemo(() => {
+    if (!playerData) return null;
+    return [...(playerData as Player[]), GUEST_PLAYER];
+  }, [playerData]);
 
   const getAllMatchesCallback = useCallback(
     async () => supabase.from('match').select('*').order('created_at', { ascending: false }),

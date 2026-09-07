@@ -6,6 +6,7 @@ import Avatar from '@/components/Avatar.tsx';
 import Select from '@/components/Select.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 import { useGameDataContext } from '@/contexts/GameDataContext.tsx';
+import { isGuestPlayer } from '@/constants/guest.ts';
 
 function PlayerSelect({
   players,
@@ -45,7 +46,14 @@ export default function Pairings() {
   const [isAdding, setIsAdding] = useState(false);
 
   const sortedPlayers = useMemo(
-    () => (players ? orderBy(players, [(p) => displayName(p)], ['asc']) : []),
+    () =>
+      players
+        ? orderBy(
+            players.filter((p) => !isGuestPlayer(p.id)),
+            [(p) => displayName(p)],
+            ['asc'],
+          )
+        : [],
     [players, displayName],
   );
 

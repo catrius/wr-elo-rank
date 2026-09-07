@@ -5,6 +5,7 @@ import { upload } from '@vercel/blob/client';
 import supabase from '@/lib/supabase.ts';
 import { useAuth } from '@/contexts/AuthContext.tsx';
 import type { Player } from '@/types/common.ts';
+import { isGuestPlayer } from '@/constants/guest.ts';
 
 const DEFAULT_AVATAR = 'https://cob0e2g1ourlhlk0.public.blob.vercel-storage.com/default.jpg';
 
@@ -215,7 +216,7 @@ export default function UserPage() {
 
   const fetchUnclaimedPlayers = useCallback(async () => {
     const { data } = await supabase.from('player').select('*').is('email', null).order('name');
-    if (data) setUnclaimedPlayers(data);
+    if (data) setUnclaimedPlayers(data.filter((p) => !isGuestPlayer(p.id)));
   }, []);
 
   useEffect(() => {

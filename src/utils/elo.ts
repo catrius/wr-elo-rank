@@ -1,6 +1,7 @@
 import { mean, zipWith } from 'es-toolkit';
 import { find } from 'es-toolkit/compat';
 import type { Player, Match } from '@/types/common.ts';
+import { isGuestPlayer } from '@/constants/guest.ts';
 
 // Dynamic K-factor: new players adjust faster, established players are more stable
 export function getKFactor(totalGames: number): number {
@@ -52,7 +53,7 @@ export function calculateMatchResult(match: Match, result: 'A' | 'B', players: P
       win,
       total,
     }),
-  );
+  ).filter((p) => !isGuestPlayer(p.id));
 
   const updatedBPlayers: Partial<Player>[] = zipWith(
     match.team_b_players,
@@ -73,7 +74,7 @@ export function calculateMatchResult(match: Match, result: 'A' | 'B', players: P
       win,
       total,
     }),
-  );
+  ).filter((p) => !isGuestPlayer(p.id));
 
   return { teamANewElos, teamBNewElos, updatedAPlayers, updatedBPlayers };
 }
@@ -97,7 +98,7 @@ export function calculateRevertedPlayers(match: Match, players: Player[]) {
         win: won ? player.win - 1 : player.win,
       };
     },
-  );
+  ).filter((p) => !isGuestPlayer(p.id));
 
   const updatedBPlayers: Partial<Player>[] = zipWith(
     match.team_b_players,
@@ -117,7 +118,7 @@ export function calculateRevertedPlayers(match: Match, players: Player[]) {
         win: won ? player.win - 1 : player.win,
       };
     },
-  );
+  ).filter((p) => !isGuestPlayer(p.id));
 
   return { updatedAPlayers, updatedBPlayers };
 }

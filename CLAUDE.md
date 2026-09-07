@@ -36,11 +36,11 @@ Six tables — auto-generated types in `src/types/database.ts`; aliases (`Player
 
 ### Match workflow
 
-Select players → form teams (drag-drop or auto-suggest) → start match (DB row with null result) → mark winner (updates Elos + win/total stats, clears `is_decaying`) → optionally revert or cancel.
+Select players → form teams (drag-drop or auto-suggest) → start match (DB row with null result) → mark winner (updates Elos + win/total stats, clears `is_decaying`) → optionally revert or cancel. Guest player can be toggled via "+ Guest" button in NewMatch; appears in teams and match history but excluded from leaderboard.
 
 ### Elo calculation
 
-Direct Elo math in `src/utils/elo.ts` (no external library). Dynamic K-factor based on games played: K=25 (<10 games), K=20 (10–30 games), K=15 (30+ games). Each player's expected score is calculated against the opposing team's mean Elo. Winner gets result=1, loser gets result=0.
+Direct Elo math in `src/utils/elo.ts` (no external library). Dynamic K-factor based on games played: K=25 (<10 games), K=20 (10–30 games), K=15 (30+ games). Each player's expected score is calculated against the opposing team's mean Elo. Winner gets result=1, loser gets result=0. Guest player (ID -1) participates in matches but never has Elo/stats updated.
 
 ### Elo decay
 
@@ -240,6 +240,14 @@ Auth-gated. Logged out: `LoginForm` (username→`@ggtk.org` email, password sign
 ### WrappedPage (`/wrapped/:id`)
 
 End-of-season "Wrapped" recap. Fetches the player, the most-recent completed season (`end` not null), all players, and that player's matches in the season window. Computes record, Elo journey (start/end/peak + date), season rank, best partner, nemesis, most-faced opponent (min 3 games), favorite teammate, busiest day, active days, best/worst week, and longest win/loss streaks. Renders hero + stat cards. Uses DisplayNameContext.
+
+## Constants
+
+### guest.ts
+
+- `GUEST_PLAYER_ID` (-1), `GUEST_PLAYER_NAME` ('Guest'), `GUEST_PLAYER_ELO` (1500) — Guest player constants
+- `GUEST_PLAYER` — Virtual player object with ID -1, always at Elo 1500, `hidden: true`
+- `isGuestPlayer(playerId)` — Helper to check if a player ID is the guest
 
 ## Key Dependencies
 

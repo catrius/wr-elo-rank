@@ -5,12 +5,14 @@ import Section from '@/components/Section.tsx';
 import TeamPanel from '@/components/TeamPanel.tsx';
 import { useGameDataContext } from '@/contexts/GameDataContext.tsx';
 import { useTeamsContext } from '@/contexts/TeamsContext.tsx';
+import { GUEST_PLAYER_ID } from '@/constants/guest.ts';
 
 export default function NewMatch() {
   const { streaks, refresh } = useGameDataContext();
   const {
     teamA,
     teamB,
+    availableIds,
     averageTeamAElos,
     averageTeamBElos,
     eloDiff,
@@ -20,11 +22,14 @@ export default function NewMatch() {
     suggestTeams,
     lastMatch,
     createMatch,
+    toggleAvailable,
     disabledSuggest,
     disabledStart,
   } = useTeamsContext();
 
   const handleStart = useCallback(() => createMatch().then(() => refresh()), [createMatch, refresh]);
+  const guestAvailable = availableIds.includes(GUEST_PLAYER_ID);
+  const handleToggleGuest = useCallback(() => toggleAvailable(GUEST_PLAYER_ID), [toggleAvailable]);
   return (
     <Section title="New Match" actions={isNumber(eloDiff) && !isNaN(eloDiff) ? <Pill>{`Diff ${eloDiff}`}</Pill> : null}>
       <div className="mb-4 text-sm">
@@ -61,6 +66,27 @@ export default function NewMatch() {
 
         <div className="flex flex-col place-content-end gap-3">
           <div className="flex place-content-end gap-3">
+            <button
+              type="button"
+              onClick={handleToggleGuest}
+              className={`
+                cursor-pointer rounded-xl border px-4 py-2
+                ${
+                  guestAvailable
+                    ? `
+                      border-indigo-600 bg-indigo-600 text-white
+                      hover:bg-indigo-700
+                    `
+                    : `
+                      border-gray-200
+                      hover:bg-gray-50
+                      dark:border-gray-700 dark:hover:bg-gray-800
+                    `
+                }
+              `}
+            >
+              {guestAvailable ? '✓ Guest' : '+ Guest'}
+            </button>
             <button
               type="button"
               onClick={() => suggestTeams(20)}
