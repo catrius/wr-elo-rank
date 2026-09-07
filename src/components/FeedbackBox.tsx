@@ -4,12 +4,14 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Pagination from 'rc-pagination';
 import dayjs from 'dayjs';
+import { upload } from '@vercel/blob/client';
 import supabase from '@/lib/supabase.ts';
 import { useAuth } from '@/contexts/AuthContext.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 import { useGameDataContext } from '@/contexts/GameDataContext.tsx';
 import Section from '@/components/Section.tsx';
 import Avatar from '@/components/Avatar.tsx';
+import FormatToolbar from '@/components/FormatToolbar.tsx';
 import type { Player } from '@/types/common.ts';
 
 const PAGE_SIZE = 10;
@@ -64,6 +66,16 @@ const markdownComponents: Components = {
       {children}
     </code>
   ),
+  img: ({ src, alt }) => (
+    <img
+      src={src}
+      alt={alt}
+      className={`
+        my-2 max-w-full rounded-lg border border-gray-200
+        dark:border-gray-700
+      `}
+    />
+  ),
 };
 
 export default function FeedbackBox() {
@@ -73,12 +85,17 @@ export default function FeedbackBox() {
   const { displayName } = useDisplayName();
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [text, setText] = useState('');
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'done' | 'joke'>('all');
   const listRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const playerMap = useMemo<Record<number, Player>>(() => {
     const map: Record<number, Player> = {};
@@ -154,10 +171,60 @@ export default function FeedbackBox() {
     load();
   }, [load]);
 
+  const handleImageUpload = useCallback(
+    async (file: File, textarea: HTMLTextAreaElement | null) => {
+      if (!textarea) return;
+      setUploading(true);
+      try {
+        const blob = await upload(`feedback/${Date.now()}-${file.name}`, file, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+        });
+        const imageMarkdown = `![${file.name}](${blob.url})`;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const isEdit = textarea === editTextareaRef.current;
+        const setter = isEdit ? setEditText : setText;
+        const currentValue = isEdit ? editText : text;
+
+        const newValue = currentValue.substring(0, start) + imageMarkdown + currentValue.substring(end);
+        setter(newValue);
+
+        // Move cursor after the inserted markdown.
+        requestAnimationFrame(() => {
+          textarea.focus();
+          const cursorPos = start + imageMarkdown.length;
+          textarea.setSelectionRange(cursorPos, cursorPos);
+        });
+      } catch (error) {
+        alert(`Upload failed: ${(error as Error).message}`);
+      } finally {
+        setUploading(false);
+      }
+    },
+    [text, editText],
+  );
+
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>, textarea: HTMLTextAreaElement | null) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        handleImageUpload(file, textarea);
+      }
+      // Reset input so the same file can be selected again.
+      e.target.value = '';
+    },
+    [handleImageUpload],
+  );
+
   const submit = useCallback(async () => {
     if (!text.trim() || !user) return;
     setSubmitting(true);
-    await supabase.from('feedback').insert({ text: text.trim(), user_id: user.id, player_id: myPlayerId });
+    await supabase.from('feedback').insert({
+      text: text.trim(),
+      user_id: user.id,
+      player_id: myPlayerId,
+    });
     setText('');
     await load();
     setSubmitting(false);
@@ -217,22 +284,107 @@ export default function FeedbackBox() {
     [user, editText, load],
   );
 
+  // Markdown formatting helpers — wrap selected text or insert at cursor.
+  const applyFormat = useCallback((textarea: HTMLTextAreaElement | null, format: string, value?: string) => {
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = textarea.value.substring(start, end);
+    const isNewInput = textarea === textareaRef.current;
+    const setter = isNewInput ? setText : setEditText;
+
+    let replacement = '';
+    let cursorOffset = 0;
+
+    switch (format) {
+      case 'bold':
+        replacement = `**${selected || 'bold text'}**`;
+        cursorOffset = selected ? replacement.length : 2;
+        break;
+      case 'italic':
+        replacement = `*${selected || 'italic text'}*`;
+        cursorOffset = selected ? replacement.length : 1;
+        break;
+      case 'code':
+        replacement = `\`${selected || 'code'}\``;
+        cursorOffset = selected ? replacement.length : 1;
+        break;
+      case 'bullet':
+        replacement = `- ${selected || 'list item'}`;
+        cursorOffset = replacement.length;
+        break;
+      case 'numbered':
+        replacement = `1. ${selected || 'list item'}`;
+        cursorOffset = replacement.length;
+        break;
+      case 'link':
+        replacement = `[${selected || 'link text'}](${value || 'url'})`;
+        cursorOffset = selected ? replacement.length : 1;
+        break;
+      default:
+        return;
+    }
+
+    const newValue = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+    setter(newValue);
+
+    // Restore focus and move cursor to end of inserted text.
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + cursorOffset, start + cursorOffset);
+    });
+  }, []);
+
+  const handleBold = useCallback(() => applyFormat(textareaRef.current, 'bold'), [applyFormat]);
+  const handleItalic = useCallback(() => applyFormat(textareaRef.current, 'italic'), [applyFormat]);
+  const handleCode = useCallback(() => applyFormat(textareaRef.current, 'code'), [applyFormat]);
+  const handleBullet = useCallback(() => applyFormat(textareaRef.current, 'bullet'), [applyFormat]);
+  const handleNumbered = useCallback(() => applyFormat(textareaRef.current, 'numbered'), [applyFormat]);
+  const handleLink = useCallback(() => applyFormat(textareaRef.current, 'link'), [applyFormat]);
+
+  const handleEditBold = useCallback(() => applyFormat(editTextareaRef.current, 'bold'), [applyFormat]);
+  const handleEditItalic = useCallback(() => applyFormat(editTextareaRef.current, 'italic'), [applyFormat]);
+  const handleEditCode = useCallback(() => applyFormat(editTextareaRef.current, 'code'), [applyFormat]);
+  const handleEditBullet = useCallback(() => applyFormat(editTextareaRef.current, 'bullet'), [applyFormat]);
+  const handleEditNumbered = useCallback(() => applyFormat(editTextareaRef.current, 'numbered'), [applyFormat]);
+  const handleEditLink = useCallback(() => applyFormat(editTextareaRef.current, 'link'), [applyFormat]);
+
   return (
     <Section title="Feedback">
       <div ref={listRef} className="flex flex-col gap-3">
         {user ? (
           <div className="flex flex-col gap-2">
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Suggest a feature or leave feedback..."
-              rows={2}
-              className={`
-                w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm
-                placeholder:text-gray-300
-                dark:border-gray-700 dark:bg-gray-800 dark:placeholder:text-gray-600
-              `}
-            />
+            <div className="flex flex-col">
+              <FormatToolbar
+                onBold={handleBold}
+                onItalic={handleItalic}
+                onCode={handleCode}
+                onBullet={handleBullet}
+                onNumbered={handleNumbered}
+                onLink={handleLink}
+                onImage={() => fileInputRef.current?.click()}
+                uploading={uploading}
+              />
+              <textarea
+                ref={textareaRef}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Suggest a feature or leave feedback..."
+                rows={4}
+                className={`
+                  w-full resize-none rounded-b-lg border-x border-b border-gray-200 bg-white px-3 py-2 text-sm
+                  placeholder:text-gray-300
+                  dark:border-gray-700 dark:bg-gray-800 dark:placeholder:text-gray-600
+                `}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={(e) => handleFileSelect(e, textareaRef.current)}
+                className="hidden"
+              />
+            </div>
             <button
               type="button"
               onClick={submit}
@@ -364,16 +516,36 @@ export default function FeedbackBox() {
                   )}
                   {isEditing ? (
                     <div className="flex flex-col gap-2">
-                      <textarea
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        rows={2}
-                        className={`
-                          w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm
-                          placeholder:text-gray-300
-                          dark:border-gray-700 dark:bg-gray-800 dark:placeholder:text-gray-600
-                        `}
-                      />
+                      <div className="flex flex-col">
+                        <FormatToolbar
+                          onBold={handleEditBold}
+                          onItalic={handleEditItalic}
+                          onCode={handleEditCode}
+                          onBullet={handleEditBullet}
+                          onNumbered={handleEditNumbered}
+                          onLink={handleEditLink}
+                          onImage={() => editFileInputRef.current?.click()}
+                          uploading={uploading}
+                        />
+                        <textarea
+                          ref={editTextareaRef}
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          rows={4}
+                          className={`
+                            w-full resize-none rounded-b-lg border-x border-b border-gray-200 bg-white px-3 py-2 text-sm
+                            placeholder:text-gray-300
+                            dark:border-gray-700 dark:bg-gray-800 dark:placeholder:text-gray-600
+                          `}
+                        />
+                        <input
+                          ref={editFileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          onChange={(e) => handleFileSelect(e, editTextareaRef.current)}
+                          className="hidden"
+                        />
+                      </div>
                       <div className="flex items-center gap-2 self-end">
                         <button
                           type="button"
