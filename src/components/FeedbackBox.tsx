@@ -469,7 +469,7 @@ export default function FeedbackBox() {
         {filteredItems.length === 0 ? (
           <p
             className={`
-              text-center text-sm text-gray-500
+              pt-16 pb-10 text-center text-sm text-gray-500
               dark:text-gray-400
             `}
           >
