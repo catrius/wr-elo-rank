@@ -12,10 +12,11 @@ dayjs.extend(utc);
 interface Props {
   match: Match;
   players: Player[] | null;
-  onEndMatch: (match: Match, result: 'A' | 'B') => void;
-  onRevertMatch: (match: Match) => void;
-  onCancelMatch: (match: Match) => void;
-  onRematch: (match: Match) => void;
+  highlightedPlayerId?: number;
+  onEndMatch?: (match: Match, result: 'A' | 'B') => void;
+  onRevertMatch?: (match: Match) => void;
+  onCancelMatch?: (match: Match) => void;
+  onRematch?: (match: Match) => void;
 }
 
 function TeamEloList({
@@ -23,11 +24,13 @@ function TeamEloList({
   newElos,
   elos,
   players,
+  highlightedPlayerId,
 }: {
   playerIds: number[];
   newElos: number[];
   elos: number[];
   players: Player[] | null;
+  highlightedPlayerId: number | undefined;
 }) {
   const { displayName } = useDisplayName();
 
@@ -50,7 +53,21 @@ function TeamEloList({
               </span>
             )}
             <Avatar src={player?.avatar ?? null} name={player ? displayName(player) : ''} />
-            <span className="min-w-0 flex-1 truncate">{player ? displayName(player) : ''}</span>
+            <span
+              className={`
+                min-w-0 flex-1 truncate
+                ${
+                  id === highlightedPlayerId
+                    ? `
+                      font-bold text-indigo-700
+                      dark:text-indigo-300
+                    `
+                    : ''
+                }
+              `}
+            >
+              {player ? displayName(player) : ''}
+            </span>
           </li>
         );
       })}
@@ -58,19 +75,74 @@ function TeamEloList({
   );
 }
 
-export default function MatchCard({ match, players, onEndMatch, onRevertMatch, onCancelMatch, onRematch }: Props) {
+export default function MatchCard({
+  match,
+  players,
+  highlightedPlayerId = undefined,
+  onEndMatch = undefined,
+  onRevertMatch = undefined,
+  onCancelMatch = undefined,
+  onRematch = undefined,
+}: Props) {
+  let playerResult: 'Win' | 'Loss' | null = null;
+  if (highlightedPlayerId !== undefined && (match.result === 'A' || match.result === 'B')) {
+    const playerTeam = match.team_a_players.includes(highlightedPlayerId)
+      ? 'A'
+      : match.team_b_players.includes(highlightedPlayerId)
+        ? 'B'
+        : null;
+    if (playerTeam) playerResult = playerTeam === match.result ? 'Win' : 'Loss';
+  }
+
   return (
     <li
       className={`
         rounded-xl border border-gray-200 p-4
         dark:border-gray-700
+        ${
+          playerResult === 'Win'
+            ? `
+              border-l-4 border-l-green-500
+              dark:border-l-green-400
+            `
+            : ''
+        }
+        ${
+          playerResult === 'Loss'
+            ? `
+              border-l-4 border-l-red-500
+              dark:border-l-red-400
+            `
+            : ''
+        }
         ${(match.result === 'Cancelled' || match.result === 'Reverted') && 'opacity-50'}
       `}
     >
       <div className="flex items-center justify-between">
         <div className="flex flex-1/4 justify-start gap-2">
+          {playerResult && (
+            <span
+              className={`
+                inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold tracking-wide uppercase ring-1
+                ring-inset
+                ${
+                  playerResult === 'Win'
+                    ? `
+                      bg-green-100 text-green-800 ring-green-200
+                      dark:bg-green-900/40 dark:text-green-300 dark:ring-green-800
+                    `
+                    : `
+                      bg-red-100 text-red-800 ring-red-200
+                      dark:bg-red-900/40 dark:text-red-300 dark:ring-red-800
+                    `
+                }
+              `}
+            >
+              {playerResult}
+            </span>
+          )}
           {match.result !== 'A' && match.result !== 'B' && <Pill>{match.result || 'In game'}</Pill>}
-          {(match.result === 'A' || match.result === 'B') && (
+          {(match.result === 'A' || match.result === 'B') && onRevertMatch && (
             <button
               type="button"
               className={`
@@ -93,7 +165,7 @@ export default function MatchCard({ match, players, onEndMatch, onRevertMatch, o
           <span>{dayjs.utc(match.created_at).local().format('DD/MM/YYYY HH:mm')}</span>
         </div>
         <div className="flex flex-1/4 justify-end gap-2">
-          {!match.result && (
+          {!match.result && onCancelMatch && (
             <button
               type="button"
               className={`
@@ -106,7 +178,7 @@ export default function MatchCard({ match, players, onEndMatch, onRevertMatch, o
               Cancel
             </button>
           )}
-          {match.result && (
+          {match.result && onRematch && (
             <button
               type="button"
               className={`
@@ -134,8 +206,9 @@ export default function MatchCard({ match, players, onEndMatch, onRevertMatch, o
             newElos={match.team_a_new_elos || []}
             elos={match.team_a_elos}
             players={players}
+            highlightedPlayerId={highlightedPlayerId}
           />
-          {!match.result && (
+          {!match.result && onEndMatch && (
             <button
               type="button"
               className={`
@@ -170,8 +243,9 @@ export default function MatchCard({ match, players, onEndMatch, onRevertMatch, o
             newElos={match.team_b_new_elos || []}
             elos={match.team_b_elos}
             players={players}
+            highlightedPlayerId={highlightedPlayerId}
           />
-          {!match.result && (
+          {!match.result && onEndMatch && (
             <button
               type="button"
               className={`

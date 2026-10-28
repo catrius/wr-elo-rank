@@ -204,6 +204,7 @@ export default function FeedbackBox() {
           textarea.setSelectionRange(cursorPos, cursorPos);
         });
       } catch (error) {
+        // eslint-disable-next-line no-alert
         alert(`Upload failed: ${(error as Error).message}`);
         // Restore original text on error.
         setter(currentValue);

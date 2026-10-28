@@ -14,6 +14,9 @@ Go Go Toolkit (GGTK) — a React SPA for managing Elo rankings across competitiv
 - `npm run build` — TypeScript type-check then Vite production build
 - `npm run lint` — ESLint (v9 flat config)
 - `npm run preview` — preview production build
+- `npm run close-season` — snapshot players and close the active season in Supabase
+- `npm run verify-season` — list seasons and their snapshot counts
+- `npm run get-season-data` — print a player snapshot for manual season closing
 
 Node version: v22.20.0 (see `.nvmrc`). Package manager: npm.
 
@@ -227,7 +230,7 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 
 ### PlayerPage (`/players/:id`)
 
-Fetches player by URL param and all matches containing that player. Displays avatar, name, `PlayerGarden`, current season stats (Elo, Wins, Losses, Win Rate), weekly stats (Elo Δ, Wins, Losses, Win Rate — shown only if active this/last week), all-time stats, and EloChart. Determines `isAdmin` from the logged-in user's email (passed to PlayerGarden). Links to `/wrapped/:id`. Uses DisplayNameContext.
+Fetches player by URL param and all matches containing that player. Displays avatar, name, `PlayerGarden`, current season stats (Elo, Wins, Losses, Win Rate), weekly stats (Elo Δ, Wins, Losses, Win Rate — shown only if active this/last week), all-time stats, EloChart, and the 20 latest matches as read-only cards with clear win/loss badges for completed games. Determines `isAdmin` from the logged-in user's email (passed to PlayerGarden). Links to `/wrapped/:id`. Uses DisplayNameContext.
 
 ### SeasonPage (`/season/:id`)
 

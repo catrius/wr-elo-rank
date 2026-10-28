@@ -125,4 +125,10 @@ export default [
   ...prettierConfig,
   // Custom Config
   ...customConfig,
+  {
+    files: ['scripts/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
 ];

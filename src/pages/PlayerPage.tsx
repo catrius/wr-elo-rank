@@ -5,10 +5,13 @@ import type { Player, Match } from '@/types/common.ts';
 import Avatar from '@/components/Avatar.tsx';
 import BackButton from '@/components/BackButton.tsx';
 import EloChart from '@/components/EloChart.tsx';
+import MatchCard from '@/components/MatchCard.tsx';
 import PlayerGarden from '@/components/PlayerGarden.tsx';
+import Section from '@/components/Section.tsx';
 import { useDisplayName } from '@/contexts/DisplayNameContext.tsx';
 import { useAuth } from '@/contexts/AuthContext.tsx';
 import { getWeekWindow, computeWeeklyStats } from '@/utils/weeklyStats.ts';
+import { GUEST_PLAYER } from '@/constants/guest.ts';
 
 export default function PlayerPage() {
   const { displayName } = useDisplayName();
@@ -18,6 +21,7 @@ export default function PlayerPage() {
   const [player, setPlayer] = useState<Player | null>(null);
   const [playerLoading, setPlayerLoading] = useState(true);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [matchPlayers, setMatchPlayers] = useState<Player[] | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchPlayer = useCallback(async () => {
@@ -30,9 +34,17 @@ export default function PlayerPage() {
     const { data } = await supabase
       .from('match')
       .select()
-      .or(`team_a_players.cs.{${playerId}},team_b_players.cs.{${playerId}}`);
+      .or(`team_a_players.cs.{${playerId}},team_b_players.cs.{${playerId}}`)
+      .order('created_at', { ascending: false });
     if (data) setMatches(data as Match[]);
   }, [playerId]);
+
+  const fetchMatchPlayers = useCallback(async () => {
+    const { data } = await supabase.from('player').select();
+    if (data) setMatchPlayers([...(data as Player[]), GUEST_PLAYER]);
+  }, []);
+
+  const latestMatches = useMemo(() => matches.slice(0, 20), [matches]);
 
   const weeklyStats = useMemo(() => {
     if (!player || matches.length === 0) return null;
@@ -58,7 +70,8 @@ export default function PlayerPage() {
   useEffect(() => {
     fetchPlayer();
     fetchMatches();
-  }, [fetchPlayer, fetchMatches]);
+    fetchMatchPlayers();
+  }, [fetchPlayer, fetchMatches, fetchMatchPlayers]);
 
   useEffect(() => {
     if (!user?.email) return;
@@ -456,6 +469,25 @@ export default function PlayerPage() {
         </div>
 
         <EloChart playerId={playerId} matches={matches} />
+
+        <Section title="Latest Matches">
+          {latestMatches.length === 0 ? (
+            <p
+              className={`
+                text-sm text-gray-600
+                dark:text-gray-300
+              `}
+            >
+              No matches yet.
+            </p>
+          ) : (
+            <ul className="space-y-4">
+              {latestMatches.map((match) => (
+                <MatchCard key={match.id} match={match} players={matchPlayers} highlightedPlayerId={playerId} />
+              ))}
+            </ul>
+          )}
+        </Section>
       </div>
     </div>
   );
