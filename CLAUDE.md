@@ -230,7 +230,7 @@ Returns `{ dark, toggleDark }`. Persisted to localStorage key `'theme'`, toggles
 
 ### PlayerPage (`/players/:id`)
 
-Fetches player by URL param and all matches containing that player. Displays avatar, name, `PlayerGarden`, current season stats (Elo, Wins, Losses, Win Rate), weekly stats (Elo Δ, Wins, Losses, Win Rate — shown only if active this/last week), all-time stats, EloChart, and the 20 latest matches as read-only cards with clear win/loss badges for completed games. Determines `isAdmin` from the logged-in user's email (passed to PlayerGarden). Links to `/wrapped/:id`. Uses DisplayNameContext.
+Fetches player by URL param and all matches containing that player. Displays avatar, name, `PlayerGarden`, current season stats (Elo, Wins, Losses, Win Rate), weekly stats (Elo Δ, Wins, Losses, Win Rate — shown only if active this/last week), all-time stats, EloChart, and the 20 latest matches as read-only cards with clear win/loss badges for completed games. Cancelled and reverted matches are hidden by default and can be shown with a checkbox. Determines `isAdmin` from the logged-in user's email (passed to PlayerGarden). Links to `/wrapped/:id`. Uses DisplayNameContext.
 
 ### SeasonPage (`/season/:id`)
 

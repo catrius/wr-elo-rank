@@ -22,6 +22,7 @@ export default function PlayerPage() {
   const [playerLoading, setPlayerLoading] = useState(true);
   const [matches, setMatches] = useState<Match[]>([]);
   const [matchPlayers, setMatchPlayers] = useState<Player[] | null>(null);
+  const [showCancelledReverted, setShowCancelledReverted] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchPlayer = useCallback(async () => {
@@ -44,7 +45,13 @@ export default function PlayerPage() {
     if (data) setMatchPlayers([...(data as Player[]), GUEST_PLAYER]);
   }, []);
 
-  const latestMatches = useMemo(() => matches.slice(0, 20), [matches]);
+  const latestMatches = useMemo(
+    () =>
+      matches
+        .filter((match) => showCancelledReverted || (match.result !== 'Cancelled' && match.result !== 'Reverted'))
+        .slice(0, 20),
+    [matches, showCancelledReverted],
+  );
 
   const weeklyStats = useMemo(() => {
     if (!player || matches.length === 0) return null;
@@ -471,6 +478,20 @@ export default function PlayerPage() {
         <EloChart playerId={playerId} matches={matches} />
 
         <Section title="Latest Matches">
+          <label
+            className={`
+              mb-4 flex w-fit cursor-pointer items-center gap-2 text-sm text-gray-600
+              dark:text-gray-300
+            `}
+          >
+            <input
+              type="checkbox"
+              checked={showCancelledReverted}
+              onChange={(event) => setShowCancelledReverted(event.target.checked)}
+              className="h-4 w-4 cursor-pointer accent-indigo-600"
+            />
+            Show cancelled and reverted matches
+          </label>
           {latestMatches.length === 0 ? (
             <p
               className={`
@@ -478,7 +499,7 @@ export default function PlayerPage() {
                 dark:text-gray-300
               `}
             >
-              No matches yet.
+              {matches.length === 0 ? 'No matches yet.' : 'No matches to show with this setting.'}
             </p>
           ) : (
             <ul className="space-y-4">
